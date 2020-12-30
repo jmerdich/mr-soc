@@ -19,9 +19,6 @@
 
 `define IMAXLEN 32
 
-`ifdef FORMAL
-//???
-
 `define ALU_OP_BITS 5
 typedef enum logic [`ALU_OP_BITS-1:0] {
     ALU_ADD,
@@ -89,5 +86,4 @@ typedef enum logic [2:0] {
     RVF3_SR = 3'b101
  } e_rvf3;
 
-`endif // not FORMAL
 `endif // MR_CONFIG_I

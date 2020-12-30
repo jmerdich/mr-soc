@@ -11,11 +11,12 @@ module simple_mem(
 
     output reg ack_o,
     output reg err_o,
+    output stall_o,
     output reg [`XLEN-1:0] dat_o
 );
 
     reg [`XLEN-1:0] mem [`MEMSIZE-1:($clog2(`XLEN)-$clog2(8))];
-    wire stall_o = 0;
+    assign stall_o = 0;
 
     integer mem_idx = 0;
     initial begin
@@ -40,7 +41,11 @@ module simple_mem(
     // Reads
     always_ff @(posedge clk_i)
         dat_o <= mem[addr_i];
-    
+
+    initial begin
+        ack_o = 0;
+        err_o = 0;
+    end
 
     always_ff @(posedge clk_i) begin 
         if (rst_i)  begin
@@ -51,5 +56,17 @@ module simple_mem(
             err_o <= (stb_i) && (addr_i >= `MEMSIZE) && (!stall_o);
         end
     end
+
+`ifdef FORMAL
+    wire [(4-1):0]	f_nreqs, f_nacks, f_outstanding;
+    fwb_slave tester(
+        .i_clk(clk_i), .i_reset(rst_i),
+		// The Wishbone bus
+		.i_wb_cyc(cyc_i), .i_wb_stb(stb_i), .i_wb_we(we_i), .i_wb_addr(addr_i), .i_wb_data(dat_o), .i_wb_sel(sel_i),
+			.i_wb_ack(ack_o), .i_wb_stall(stall_o), .i_wb_idata(dat_i), .i_wb_err(err_o),
+		// Some convenience output parameters
+		.f_nreqs, .f_nacks, .f_outstanding
+    );
+`endif
 
 endmodule

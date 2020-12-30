@@ -3,12 +3,16 @@ mode bmc
 depth 10
 
 [engines]
-smtbmc
+smtbmc z3
 
 [script]
+read_verilog -formal -sv params.svi
 read_verilog -formal fwb_slave.v
 read_verilog -formal -sv simple_mem.sv
 prep -top simple_mem
+
+[file params.svi]
+`define MEMSIZE 32
 
 [files]
 ../../extern/zip-formal/fwb_slave.v
