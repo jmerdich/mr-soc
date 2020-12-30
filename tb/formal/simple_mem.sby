@@ -1,0 +1,16 @@
+[options]
+mode bmc
+depth 10
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -formal fwb_slave.v
+read_verilog -formal -sv simple_mem.sv
+prep -top simple_mem
+
+[files]
+../../extern/zip-formal/fwb_slave.v
+../../rtl/config.svi
+../../rtl/simple_mem.sv

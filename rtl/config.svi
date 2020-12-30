@@ -1,0 +1,93 @@
+`ifndef MR_CONFIG_I
+`define MR_CONFIG_I
+
+`ifndef XLEN
+`define XLEN 32
+`endif
+
+`ifndef IALIGN
+`define IALIGN 32
+`endif
+
+`ifndef RESET_VEC
+`define RESET_VEC {`XLEN{1'0}}
+`endif
+
+`ifndef MEMSIZE
+`define MEMSIZE 32*1024*1024
+`endif
+
+`define IMAXLEN 32
+
+`ifdef FORMAL
+//???
+
+`define ALU_OP_BITS 5
+typedef enum logic [`ALU_OP_BITS-1:0] {
+    ALU_ADD,
+    ALU_SUB,
+    ALU_AND,
+    ALU_OR,
+    ALU_XOR,
+    ALU_SH_L,
+    ALU_SH_RA,
+    ALU_SH_RL,
+    ALU_CMP_LT,
+    ALU_CMP_LTU
+} e_aluops;
+
+`define MEM_OP_BITS 5
+typedef enum logic [`MEM_OP_BITS-1:0] {
+    MEMOP_NONE
+} e_memops;
+
+
+// Official RISC-V non-C ops (inst[6:2])
+typedef enum logic [4:0] {
+    RV_LOAD      = 5'b00000,
+    RV_LOAD_FP   = 5'b00001,
+    RV_CUSTOM0   = 5'b00010,
+    RV_MISC_MEM  = 5'b00011,
+    RV_OP_IMM    = 5'b00100,
+    RV_AUIPC     = 5'b00101,
+    RV_OP_IMM_32 = 5'b00110,
+    RV_RSVD_48B1 = 5'b00111,
+    RV_STORE     = 5'b01000,
+    RV_STORE_FP  = 5'b01001,
+    RV_CUSTOM1   = 5'b01010,
+    RV_AMO       = 5'b01011,
+    RV_OP        = 5'b01100,
+    RV_LUI       = 5'b01101,
+    RV_OP_32     = 5'b01110,
+    RV_RSVD_64B  = 5'b01111,
+    RV_MADD      = 5'b10000,
+    RV_MSUB      = 5'b10001,
+    RV_NMSUB     = 5'b10010,
+    RV_NMADD     = 5'b10011,
+    RV_OP_FP     = 5'b10100,
+    RV_RSVD_1    = 5'b10101,
+    RV_CUSTOM2   = 5'b10110,
+    RV_RSVD_48B2 = 5'b10111,
+    RV_BRANCH    = 5'b11000,
+    RV_JALR      = 5'b11001,
+    RV_RSVD2     = 5'b11010,
+    RV_JAL       = 5'b11011,
+    RV_SYSTEM    = 5'b11100,
+    RV_RSVD3     = 5'b11101,
+    RV_CUSTOM3   = 5'b11110,
+    RV_RSVD_80B  = 5'b11111
+} e_rvop;
+
+typedef enum logic [2:0] { 
+    RVF3_ADD = 3'b000,
+    RVF3_SLT = 3'b010,
+    RVF3_SLTU = 3'b011,
+    RVF3_XOR = 3'b100,
+    RVF3_OR = 3'b110,
+    RVF3_AND = 3'b111,
+    RVF3_SL = 3'b001,
+    RVF3_SR = 3'b101
+ } e_rvf3;
+
+`endif // not FORMAL
+`endif // MR_CONFIG_I
