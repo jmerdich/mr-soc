@@ -1,0 +1,16 @@
+[options]
+mode bmc
+depth 10
+
+[engines]
+smtbmc z3
+
+[script]
+read_verilog -formal fwb_master.v
+read_verilog -formal -sv mr_ldst.sv
+prep -top mr_ldst
+
+[files]
+../../extern/zip-formal/fwb_master.v
+../../rtl/config.svi
+../../rtl/mr_ldst.sv

@@ -33,10 +33,20 @@ typedef enum logic [`ALU_OP_BITS-1:0] {
     ALU_CMP_LTU
 } e_aluops;
 
-`define MEM_OP_BITS 5
+`define MEM_OP_BITS 2
 typedef enum logic [`MEM_OP_BITS-1:0] {
-    MEMOP_NONE
+    MEMOP_NONE,
+    MEMOP_LOAD,
+    MEMOP_STORE
 } e_memops;
+
+`define MEM_SZ_BITS 2
+typedef enum logic [`MEM_SZ_BITS-1:0] {
+    MEMSZ_1B = 0,
+    MEMSZ_2B = 1,
+    MEMSZ_4B = 2,
+    MEMSZ_8B = 3
+} e_memsz;
 
 
 // Official RISC-V non-C ops (inst[6:2])
