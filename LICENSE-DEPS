@@ -1,7 +1,0 @@
-REQUIRED DEPENDENCIES:
-    extern/wb2axip, Apache, Gisselquist Technology, LLC
-
-OPTIONAL DEPENDENCIES:
-    extern/zip-formal, GPLv3, Gisselquist Technology, LLC
-      *** Distribution/use with a copy of this library makes the combined work
-          licensed under GPLv3 ***
