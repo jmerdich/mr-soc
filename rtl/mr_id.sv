@@ -107,6 +107,22 @@ module mr_id (
                 RVF3_SR: next_alu_op = (inv ? ALU_SH_RA : ALU_SH_RL);
             endcase
         end
+        RV_LUI: begin
+            op_valid = 1;
+            next_arg1 = 0;
+            next_arg2 = imm_u_lo;
+            next_dst = rsd;
+            next_mem_op = MEMOP_NONE;
+            next_alu_op = ALU_ADD;
+        end
+        RV_AUIPC: begin
+            op_valid = 1;
+            next_arg1 = inst_pc;
+            next_arg2 = imm_u_lo;
+            next_dst = rsd;
+            next_mem_op = MEMOP_NONE;
+            next_alu_op = ALU_ADD;
+        end
         default: begin
             // What is this?
             op_valid = 0;
