@@ -90,6 +90,7 @@ typedef enum logic [4:0] {
 } e_rvop;
 
 typedef enum logic [2:0] { 
+    // ALU ops
     RVF3_ADD = 3'b000,
     RVF3_SLT = 3'b010,
     RVF3_SLTU = 3'b011,
@@ -98,6 +99,21 @@ typedef enum logic [2:0] {
     RVF3_AND = 3'b111,
     RVF3_SL = 3'b001,
     RVF3_SR = 3'b101
- } e_rvf3;
+ } e_rvf3_alu;
+
+typedef enum logic [2:0] { 
+    // MEM widths
+    RVF3_BYTE = 3'b000,
+    RVF3_HALF = 3'b001,
+    RVF3_WORD = 3'b010,
+    RVF3_UBYTE = 3'b100,
+    RVF3_UHALF = 3'b101,
+    // rv64 only:
+    RVF3_QUAD = 3'b011,
+    RVF3_UWORD = 3'b110,
+    // ???
+    RVF3_RSVD_111 = 3'b111
+} e_rvf3_mem;
+
 
 `endif // MR_CONFIG_I

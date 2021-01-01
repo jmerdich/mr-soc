@@ -20,7 +20,7 @@ module mr_id (
 
     output [`MEM_OP_BITS-1:0] alu_memop,
     output [`MEM_SZ_BITS-1:0] alu_size,
-    output alu_signed,
+    output alu_signed, // ignored on store
     output [`XLEN-1:0] alu_payload,
 
     // From WB
@@ -61,6 +61,9 @@ module mr_id (
         alu_arg2 <= next_arg2;
         alu_aluop <= next_alu_op;
         alu_dst <= next_dst;
+        alu_size <= next_size;
+        alu_signed <= next_signed;
+        alu_payload <= next_payload;
         if (wb_valid) begin
             regfile[wb_reg] <= wb_val;
         end
@@ -68,7 +71,10 @@ module mr_id (
 
     logic [`XLEN-1:0] next_arg1;
     logic [`XLEN-1:0] next_arg2;
+    logic [`XLEN-1:0] next_payload;
     logic [`ALU_OP_BITS-1:0] next_alu_op;
+    logic [`MEM_SZ_BITS-1:0] next_size;
+    logic                    next_signed;
     logic [`MEM_OP_BITS-1:0] next_mem_op;
     logic [`REGSEL_BITS-1:0] next_dst;
     logic op_valid;
@@ -122,6 +128,63 @@ module mr_id (
             next_dst = rsd;
             next_mem_op = MEMOP_NONE;
             next_alu_op = ALU_ADD;
+        end
+        RV_STORE: begin
+            // sign doesn't make sense for stores, rv64 unsupported
+            op_valid = (func3[2] == 0) & (func3 != 3'b011);
+            next_arg1 = regfile[rs1];
+            next_arg2 = imm_s_lo;
+            next_dst = 0;
+            next_alu_op = ALU_ADD; // Use ALU for addr calc
+            next_payload = regfile[rs2];
+
+            next_mem_op = MEMOP_STORE;
+            case (func3)
+                RVF3_BYTE: next_size = MEMSZ_1B;
+                RVF3_HALF: next_size = MEMSZ_2B;
+                RVF3_WORD: next_size = MEMSZ_4B;
+                default: begin
+                    next_size = 2'bxx;
+                    assert(op_valid == 0);
+                end
+            endcase
+        end
+        RV_LOAD: begin
+            next_arg1 = regfile[rs1];
+            next_arg2 = imm_s_lo;
+            next_dst = 0;
+            next_alu_op = ALU_ADD; // Use ALU for addr calc
+            next_payload = regfile[rs2];
+
+            next_mem_op = MEMOP_STORE;
+            case (func3)
+                RVF3_BYTE: begin
+                    next_size = MEMSZ_1B;
+                    next_signed = 1;
+                    op_valid = 1;
+                end
+                RVF3_UBYTE: begin
+                    next_size = MEMSZ_1B;
+                    next_signed = 0;
+                    op_valid = 1;
+                end
+                RVF3_HALF: begin
+                    next_size = MEMSZ_2B;
+                    next_signed = 1;
+                    op_valid = 1;
+                end
+                RVF3_UHALF: begin
+                    next_size = MEMSZ_2B;
+                    next_signed = 0;
+                    op_valid = 1;
+                end
+                RVF3_WORD: begin
+                    next_size = MEMSZ_4B;
+                    next_signed = 0;
+                    op_valid = 1;
+                end
+                default: op_valid = 0;
+            endcase
         end
         default: begin
             // What is this?
