@@ -5,6 +5,9 @@
 #include <iostream>             // Need std::cout
 #include "Vmr_core.h"               // From Verilating "top.v"
 
+#include "Vmr_core_mr_core.h"
+#include "Vmr_core_simple_mem.h"
+
 #define Vtop Vmr_core
 
 Vtop *top;                      // Instantiation of module
@@ -27,6 +30,9 @@ int main(int argc, char** argv) {
     top = new Vtop;             // Create instance
     top->trace(tfp, 99);
     tfp->open("obj_dir/sim.vcd");
+
+    memset(top->mr_core->ram->mem, 0, sizeof(top->mr_core->ram->mem));
+    top->mr_core->ram->mem[0] = 0x00108093;
 
     top->rst = 1;           // Set some inputs
 

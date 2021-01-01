@@ -15,15 +15,19 @@ module simple_mem(
     output reg [`XLEN-1:0] dat_o
 );
 
-    reg [`XLEN-1:0] mem [`MEMSIZE-1:($clog2(`XLEN)-$clog2(8))];
+    reg [`XLEN-1:0] mem [`MEMSIZE-1:($clog2(`XLEN)-$clog2(8))]  /* verilator public */;
     assign stall_o = 0;
 
+`ifndef VERILATOR
+    // If using verilator, rely on C++ TB to set this up.
     integer mem_idx = 0;
     initial begin
         for (mem_idx = 0; mem_idx < `MEMSIZE; mem_idx++) begin
             mem[mem_idx] = 0;
         end
     end
+`endif
+
     logic [`XLEN-1:0] wmask;
     integer mask_idx = 0;
     always_comb begin:wmaskgen
