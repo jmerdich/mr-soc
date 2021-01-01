@@ -10,14 +10,14 @@ module mr_ldst(
     input ex_signed_i,
     input [`XLEN-1:0] ex_addr_i,
     input [`XLEN-1:0] ex_payload_i,
-    input [31:0] ex_dst_reg_i,
+    input [`REGSEL_BITS-1:0] ex_dst_reg_i,
     input ex_valid_i,
     output ex_ready_o,
 
     // To WB
     output reg wb_write,
     output reg [`XLEN-1:0] wb_payload_o,
-    output reg [31:0] wb_dst_reg_o,
+    output reg [`REGSEL_BITS-1:0] wb_dst_reg_o,
     // assume no stall for WB stage
 
     // Wishbone master
@@ -37,7 +37,7 @@ module mr_ldst(
 // Metadata on active transaction
 logic [`MEM_SZ_BITS-1:0] size_pending;
 logic signed_pending;
-logic [31:0] dst_reg_pending;
+logic [`REGSEL_BITS-1:0] dst_reg_pending;
 
 initial cyc_o = 0;
 initial stb_o = 0;

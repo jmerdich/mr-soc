@@ -12,7 +12,7 @@ VERILATOR_VER_ARGS = --cc --build
 TOP_MODULE = mr_core
 
 # SOURCES
-INCLUDE_DIRS = rtl
+INCLUDE_DIRS = rtl extern/wb2axip/rtl
 V_HEADERS = rtl/config.svi
 V_SOURCES = rtl/mr_core.sv rtl/mr_alu.sv rtl/mr_id.sv rtl/mr_ifetch.sv rtl/mr_ldst.sv  rtl/simple_mem.sv
 

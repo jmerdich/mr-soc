@@ -18,6 +18,7 @@
 `endif
 
 `define IMAXLEN 32
+`define REGSEL_BITS 5
 
 `define ALU_OP_BITS 5
 typedef enum logic [`ALU_OP_BITS-1:0] {

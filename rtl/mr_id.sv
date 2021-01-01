@@ -5,22 +5,31 @@ module mr_id (
 
     // From ifetch
     input [`IMAXLEN-1:0] inst,
+    input [`XLEN-1:0] inst_pc,
+    output inst_ready,
     input inst_valid,
 
     // To following stages
-    output reg valid,
-    output reg [`XLEN-1:0] arg1,
-    output reg [`XLEN-1:0] arg2,
-    output reg [5-1:0] dst,
-    output reg dst_pc,
-    output reg [`ALU_OP_BITS-1:0] alu_op,
+    output reg alu_valid,
+    input alu_ready,
+    output reg [`XLEN-1:0] alu_arg1,
+    output reg [`XLEN-1:0] alu_arg2,
+    output reg [`REGSEL_BITS-1:0] alu_dst,
+    output reg alu_dst_pc,
+    output reg [`ALU_OP_BITS-1:0] alu_aluop,
 
+    output [`MEM_OP_BITS-1:0] alu_memop,
+    output [`MEM_SZ_BITS-1:0] alu_size,
+    output alu_signed,
+    output [`XLEN-1:0] alu_payload,
 
     // From WB
     input wb_valid,
-    input [4:0] wb_reg,
+    input [`REGSEL_BITS-1:0] wb_reg,
     input [`XLEN-1:0] wb_val
 );
+
+    assign inst_ready = alu_ready;
 
     logic [31:1][`XLEN-1:0] regfile;
 
@@ -47,11 +56,11 @@ module mr_id (
     end
 
     always_ff @(posedge clk) begin
-        valid <= len_valid & op_valid & !rst & inst_valid;
-        arg1 <= next_arg1;
-        arg2 <= next_arg2;
-        alu_op <= next_alu_op;
-        dst <= next_dst;
+        alu_valid <= len_valid & op_valid & !rst & inst_valid;
+        alu_arg1 <= next_arg1;
+        alu_arg2 <= next_arg2;
+        alu_aluop <= next_alu_op;
+        alu_dst <= next_dst;
         if (wb_valid) begin
             regfile[wb_reg] <= wb_val;
         end
@@ -60,7 +69,8 @@ module mr_id (
     logic [`XLEN-1:0] next_arg1;
     logic [`XLEN-1:0] next_arg2;
     logic [`ALU_OP_BITS-1:0] next_alu_op;
-    logic [5-1:0] next_dst;
+    logic [`MEM_OP_BITS-1:0] next_mem_op;
+    logic [`REGSEL_BITS-1:0] next_dst;
     logic op_valid;
     always_comb case(op)
         RV_OP_IMM: begin
@@ -68,6 +78,7 @@ module mr_id (
             next_arg1 = regfile[rs1];
             next_arg2 = { imm_i_lo};
             next_dst = rsd;
+            next_mem_op = MEMOP_NONE;
             case (func3)
                 RVF3_ADD: next_alu_op = ALU_ADD; // Note no subtract here
                 RVF3_SLT: next_alu_op = ALU_CMP_LT;
@@ -84,6 +95,7 @@ module mr_id (
             next_arg1 = regfile[rs1];
             next_arg2 = regfile[rs2];
             next_dst = rsd;
+            next_mem_op = MEMOP_NONE;
             case (func3)
                 RVF3_ADD: next_alu_op = (inv ? ALU_SUB : ALU_ADD);
                 RVF3_SLT: next_alu_op = ALU_CMP_LT;
