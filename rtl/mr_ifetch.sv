@@ -1,12 +1,15 @@
 `include "rtl/config.svi"
 
-// TODO: handle IALIGN==16 and XLEN==64
+// TODO:
+//  - handle IALIGN==16 and XLEN==64
+//  - start next req before ID ack's   
+//  - handle jump hazards
 
 module mr_ifetch(
     input clk, rst,
 
     // Mem
-    output reg [`XLEN-1:$clog2(`XLEN)-1] adr_o,
+    output reg [`XLEN-1:`XLEN_GRAN] adr_o,
     // unpop: dat_o
     input [`XLEN-1:0] dat_i,
     // unpop: we_o
@@ -28,11 +31,6 @@ module mr_ifetch(
     input wb_pc_valid
 );
 
-    // stub
-    assign inst_valid = 1;
-    assign inst = 32'h00108093;
-    assign inst_pc = 0;
-
     reg [`XLEN-1:0] pc;
     initial begin
         pc = `RESET_VEC;
@@ -51,24 +49,21 @@ module mr_ifetch(
             pc <= pc;
     end
 
-
-    /*
-    always_ff @(posedge clk) begin
-        if (req && data_valid) begin
-            inst <= data;
-            inst_pc <= pc;
-            inst_valid <= 1;
-            req <= 0;
-        end else if (!req) begin
-            addr <= pc;
-            req <= 1;
-        end
-    end
-    */
-
     logic reset;
     initial reset = 1;
     always @(posedge clk) reset <= reset & rst;
+
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            inst_valid <= 0;
+        end else if (ack_i & (!stb_o | !stall_i)) begin
+            inst_valid <= 1;
+            inst_pc <= pc;
+            inst <= dat_i;
+        end else begin
+            inst_valid <= 0;
+        end
+    end
 
     initial cyc_o = 0;
     initial stb_o = 0;
@@ -96,11 +91,11 @@ module mr_ifetch(
         end else begin
             // Idle
 
-            // TODO: when to fetch?
-            if (0) begin
+            if ((inst_pc != pc) || !inst_valid) begin
                 // New memory req!
                 cyc_o <= 1;
                 stb_o <= 1;
+                adr_o <= pc[`XLEN-1:`XLEN_GRAN];
             end
         end
     end

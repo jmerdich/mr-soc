@@ -5,6 +5,9 @@
 `define XLEN 32
 `endif
 
+`define XLEN_BYTES (`XLEN/8)
+`define XLEN_GRAN ($clog2(`XLEN) - 3)
+
 `ifndef IALIGN
 `define IALIGN 32
 `endif

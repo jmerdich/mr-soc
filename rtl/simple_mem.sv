@@ -2,7 +2,7 @@
 
 module simple_mem(
     input clk_i, rst_i,
-    input [`XLEN-1:$clog2(`XLEN)-1] addr_i,
+    input [`XLEN-1:`XLEN_GRAN] addr_i,
     input we_i,
     input [`XLEN/8-1:0] sel_i,
     input [`XLEN-1:0] dat_i,
@@ -15,8 +15,10 @@ module simple_mem(
     output reg [`XLEN-1:0] dat_o
 );
 
-    reg [`XLEN-1:0] mem [`MEMSIZE-1:($clog2(`XLEN)-$clog2(8))]  /* verilator public */;
+    reg [`XLEN-1:0] mem [`MEMSIZE/`XLEN_BYTES-1:0]  /* verilator public */;
     assign stall_o = 0;
+
+    wire [$clog2(`MEMSIZE/`XLEN_BYTES)-1:0] addr = addr_i[$clog2(`MEMSIZE)-1:`XLEN_GRAN];
 
 `ifndef VERILATOR
     // If using verilator, rely on C++ TB to set this up.
@@ -39,12 +41,13 @@ module simple_mem(
     // Writes
     always_ff @(posedge clk_i)
         if (stb_i && we_i && !stall_o) begin
-            mem[addr_i] <= (mem[addr_i] & ~wmask) | (dat_i & wmask);
+            mem[addr] <= (mem[addr] & ~wmask) | (dat_i & wmask);
         end
 
     // Reads
-    always_ff @(posedge clk_i)
-        dat_o <= mem[addr_i];
+    always_ff @(posedge clk_i) begin
+        dat_o <= mem[addr];
+    end
 
     initial begin
         ack_o = 0;

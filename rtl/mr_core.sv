@@ -99,7 +99,7 @@ module mr_core (
     mr_ifetch ifetch(clk, rst,
 
         // memory bus
-        .adr_o(wbm0_adr_i[`XLEN-1:$clog2(`XLEN)-1]), .dat_i(wbm0_dat_o), .stb_o(wbm0_stb_i), .ack_i(wbm0_ack_o), .err_i(wbm0_err_o),
+        .adr_o(wbm0_adr_i[`XLEN-1:`XLEN_GRAN]), .dat_i(wbm0_dat_o), .stb_o(wbm0_stb_i), .ack_i(wbm0_ack_o), .err_i(wbm0_err_o),
         .stall_i(wbm0_stall_o), .cyc_o(wbm0_cyc_i),
 
         // Forwards to ID
@@ -148,12 +148,12 @@ module mr_core (
         .wb_write(wb_reg_valid), .wb_dst_reg_o(wb_reg), .wb_payload_o(wb_reg_data),
 
         // Memory iface
-        .addr_o(wbm1_adr_i[`XLEN-1:$clog2(`XLEN)-1]), .dat_i(wbm1_dat_o), .dat_o(wbm1_dat_i), .stb_o(wbm1_stb_i), .ack_i(wbm1_ack_o),
+        .addr_o(wbm1_adr_i[`XLEN-1:`XLEN_GRAN]), .dat_i(wbm1_dat_o), .dat_o(wbm1_dat_i), .stb_o(wbm1_stb_i), .ack_i(wbm1_ack_o),
         .we_o(wbm1_we_i), .sel_o(wbm1_sel_i), .err_i(wbm1_err_o), .stall_i(wbm1_stall_o), .cyc_o(wbm1_cyc_i)
     );
 
     simple_mem ram(.clk_i(clk), .rst_i(rst),
-                   .addr_i(wbs_adr_o[`XLEN-1:$clog2(`XLEN)-1]),
+                   .addr_i(wbs_adr_o[`XLEN-1:`XLEN_GRAN]),
                    .we_i(wbs_we_o),
                    .sel_i(wbs_sel_o),
                    .dat_i(wbs_dat_o),

@@ -7,7 +7,7 @@ VERILATOR = verilator
 VERILATOR_ARGS = --top-module ${TOP_MODULE} ${VERILATOR_WARNS} $(addprefix -I,${INCLUDE_DIRS})
 VERILATOR_WARNS = -Wall -Wno-unused
 VERILATOR_LINT_ARGS = --lint-only
-VERILATOR_VER_ARGS = --cc --build --exe -Wno-undriven --trace
+VERILATOR_VER_ARGS = --cc --build --exe -Wno-undriven --trace -CFLAGS -ggdb
 VERILATOR_CXX_SOURCES = tb/verilate/main.cpp
 
 TOP_MODULE = mr_core

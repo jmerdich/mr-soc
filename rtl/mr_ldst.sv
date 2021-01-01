@@ -21,7 +21,7 @@ module mr_ldst(
     // assume no stall for WB stage
 
     // Wishbone master
-    output reg [`XLEN-1:$clog2(`XLEN)-1] addr_o,
+    output reg [`XLEN-1:`XLEN_GRAN] addr_o,
     output reg we_o,
     output reg [`XLEN/8-1:0] sel_o,
     output reg [`XLEN-1:0] dat_o,
@@ -81,7 +81,7 @@ wire [`XLEN-1:0] shifted_dat_i = dat_i; // TODO: shifts and sign-ext
 // Data sending logic
 always_ff @(posedge clk) begin
     if (!reset & !cyc_o & ex_valid_i & ex_op_i != MEMOP_NONE) begin
-        addr_o <= ex_addr_i[`XLEN-1:$clog2(`XLEN)-1];
+        addr_o <= ex_addr_i[`XLEN-1:`XLEN_GRAN];
         we_o <= (ex_op_i == MEMOP_STORE);
         sel_o <= sel;
         dat_o <= ex_payload_i;

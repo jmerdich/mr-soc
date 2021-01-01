@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
     top->trace(tfp, 99);
     tfp->open("obj_dir/sim.vcd");
 
-    memset(top->mr_core->ram->mem, 0, sizeof(top->mr_core->ram->mem));
+    memset(top->mr_core->ram->mem, 0xff, sizeof(top->mr_core->ram->mem));
     top->mr_core->ram->mem[0] = 0x00108093;
 
     top->rst = 1;           // Set some inputs
