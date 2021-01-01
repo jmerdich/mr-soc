@@ -29,8 +29,8 @@ module mr_ifetch(
 );
 
     // stub
-    assign inst_valid = 0;
-    assign inst = 0;
+    assign inst_valid = 1;
+    assign inst = 32'h00108093;
     assign inst_pc = 0;
 
     reg [`XLEN-1:0] pc;

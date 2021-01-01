@@ -1,7 +1,7 @@
 `include "rtl/config.svi"
 
 module mr_core (
-    input clk, rst
+    input clk /* verilator clocker */, rst /* verilator public */
 );        
     // ******************************************************
     // *** Memory Interconnect
@@ -63,7 +63,7 @@ module mr_core (
     wire wb_pc_valid = 0;
 
     // WB -> ID
-    wire wb_reg_valid = 0;
+    wire wb_reg_valid;
     wire [`REGSEL_BITS-1:0] wb_reg;
     wire [`XLEN-1:0]        wb_reg_data;
 

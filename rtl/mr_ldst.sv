@@ -100,7 +100,7 @@ always_ff @(posedge clk) begin
         wb_dst_reg_o <= dst_reg_pending;
     end else if (!cyc_o & ex_valid_i & (ex_op_i == MEMOP_NONE)) begin
         wb_write <= 1;
-        wb_payload_o <= ex_payload_i;
+        wb_payload_o <= ex_addr_i;
         wb_dst_reg_o <= ex_dst_reg_i;
     end else begin
         wb_write <= 0;
