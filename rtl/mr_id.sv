@@ -25,14 +25,32 @@ module mr_id (
     output [`XLEN-1:0] alu_payload2,
 
     // From WB
+    // input jmp_done,
     input wb_valid,
     input [`REGSEL_BITS-1:0] wb_reg,
     input [`XLEN-1:0] wb_val
 );
 
-    assign inst_ready = alu_ready;
+    assign inst_ready = alu_ready & !rst & (!inst_valid | !data_hazard);
 
     logic [31:1][`XLEN-1:0] regfile;
+    logic [31:1][1:0] reg_writes_pending;
+    logic [`XLEN-1:0] rs1_data = (rs1 != 0) ? regfile[rs1] : 0;
+    logic [`XLEN-1:0] rs2_data = (rs2 != 0) ? regfile[rs2] : 0;
+    // hazard detection
+
+    logic [1:0] rs1_writes_pending = reg_writes_pending[rs1];
+    logic [1:0] rs2_writes_pending = reg_writes_pending[rs2];
+    logic rs1_data_hazard = (next_uses_rs1 & (rs1 != 0) & (rs1_writes_pending != 0));
+    logic rs2_data_hazard = (next_uses_rs2 & (rs2 != 0) & (rs2_writes_pending != 0));
+
+//`define REPRO
+`ifdef REPRO
+    logic data_hazard = rs1_data_hazard || rs2_data_hazard;
+`else
+    logic data_hazard;
+    assign data_hazard = rs1_data_hazard || rs2_data_hazard;
+`endif
 
     logic is_comp = (inst[1:0] != 2'b11);
     logic len_valid = (inst[4:2] != 3'b111) && (!is_comp || (`IALIGN == 16));
@@ -56,18 +74,37 @@ module mr_id (
         regfile = 0;
     end
 
+    logic next_alu_valid;
+    assign next_alu_valid = len_valid & op_valid & !rst & inst_valid & !data_hazard;
     always_ff @(posedge clk) begin
-        alu_valid <= len_valid & op_valid & !rst & inst_valid;
-        alu_arg1 <= next_arg1;
-        alu_arg2 <= next_arg2;
-        alu_aluop <= next_alu_op;
-        alu_dst <= next_dst;
-        alu_size <= next_size;
-        alu_signed <= next_signed;
-        alu_payload <= next_payload;
-        alu_payload2 <= next_payload2;
-        if (wb_valid) begin
+        alu_valid <= next_alu_valid;
+        if (rst) begin
+            reg_writes_pending <= 0;
+        end
+        if (next_alu_valid) begin
+            alu_arg1 <= next_arg1;
+            alu_arg2 <= next_arg2;
+            alu_aluop <= next_alu_op;
+            alu_dst <= next_dst;
+            alu_size <= next_size;
+            alu_signed <= next_signed;
+            alu_payload <= next_payload;
+            alu_payload2 <= next_payload2;
+
+            if (next_uses_rsd && rsd != 0) begin
+                assert(reg_writes_pending[rsd] != 2'b11);
+                reg_writes_pending[rsd] <= reg_writes_pending[rsd] + 1;
+            end
+        end
+        if (wb_valid && (wb_reg != 0)) begin
+            assert(reg_writes_pending[wb_reg] != 0);
             regfile[wb_reg] <= wb_val;
+            reg_writes_pending[wb_reg] <= reg_writes_pending[wb_reg] - 1;
+        end
+
+        // simultaneous inc and dec hazard counter to same register
+        if (next_alu_valid & wb_valid & next_uses_rsd & rsd != 0 & wb_reg != 0 & wb_reg == rsd) begin
+            reg_writes_pending[wb_reg] <= reg_writes_pending[wb_reg];
         end
     end
 
@@ -81,6 +118,9 @@ module mr_id (
     logic [`MEM_OP_BITS-1:0] next_mem_op;
     logic [`BR_OP_BITS-1:0] next_br_op;
     logic [`REGSEL_BITS-1:0] next_dst;
+    logic next_uses_rs1;
+    logic next_uses_rs2;
+    logic next_uses_rsd;
     logic op_valid;
     always_comb begin 
         // Sane defaults with no side effects
@@ -93,13 +133,18 @@ module mr_id (
         next_arg2 = 0;
         next_payload = 0;
         next_payload2 = 0;
+        next_uses_rs1 = 0;
+        next_uses_rs2 = 0;
+        next_uses_rsd = 0;
 
         case(op)
         RV_OP_IMM: begin
             op_valid = 1;
-            next_arg1 = regfile[rs1];
+            next_arg1 = rs1_data; 
+            next_uses_rs1 = 1;
             next_arg2 = { imm_i_lo};
             next_dst = rsd;
+            next_uses_rsd = 1;
             case (func3)
                 RVF3_ADD: next_alu_op = ALU_ADD; // Note no subtract here
                 RVF3_SLT: next_alu_op = ALU_CMP_LT;
@@ -113,9 +158,12 @@ module mr_id (
         end
         RV_OP: begin
             op_valid = (func7[4:0] == 5'b00000) && (func7[6] == 0);
-            next_arg1 = regfile[rs1];
-            next_arg2 = regfile[rs2];
+            next_arg1 = rs1_data;
+            next_arg2 = rs2_data;
             next_dst = rsd;
+            next_uses_rs1 = 1;
+            next_uses_rs2 = 1;
+            next_uses_rsd = 1;
             case (func3)
                 RVF3_ADD: next_alu_op = (inv ? ALU_SUB : ALU_ADD);
                 RVF3_SLT: next_alu_op = ALU_CMP_LT;
@@ -132,6 +180,7 @@ module mr_id (
             next_arg1 = 0;
             next_arg2 = imm_u_lo;
             next_dst = rsd;
+            next_uses_rsd = 1;
             next_alu_op = ALU_ADD;
         end
         RV_AUIPC: begin
@@ -139,16 +188,19 @@ module mr_id (
             next_arg1 = inst_pc;
             next_arg2 = imm_u_lo;
             next_dst = rsd;
+            next_uses_rsd = 1;
             next_alu_op = ALU_ADD;
         end
         RV_STORE: begin
             // sign doesn't make sense for stores, rv64 unsupported
             op_valid = (func3[2] == 0) & (func3 != 3'b011);
-            next_arg1 = regfile[rs1];
+            next_arg1 = rs1_data;
+            next_uses_rs1 = 1;
             next_arg2 = imm_s_lo;
             next_dst = 0;
             next_alu_op = ALU_ADD; // Use ALU for addr calc
-            next_payload = regfile[rs2];
+            next_payload = rs2_data;
+            next_uses_rs2 = 1;
 
             next_mem_op = MEMOP_STORE;
             case (func3)
@@ -162,11 +214,12 @@ module mr_id (
             endcase
         end
         RV_LOAD: begin
-            next_arg1 = regfile[rs1];
+            next_arg1 = rs1_data;
+            next_uses_rs1 = 1;
             next_arg2 = imm_s_lo;
             next_dst = rsd;
+            next_uses_rsd = 1;
             next_alu_op = ALU_ADD; // Use ALU for addr calc
-            next_payload = regfile[rs2];
 
             next_mem_op = MEMOP_STORE;
             case (func3)
@@ -203,15 +256,18 @@ module mr_id (
             next_arg1 = inst_pc;
             next_arg2 = imm_j_lo;
             next_dst = rsd;
+            next_uses_rsd = 1;
             next_alu_op = ALU_ADD;
             next_br_op = BROP_ALWAYS;
             next_payload = inst_pc;
         end
         RV_JALR: begin
             op_valid = (func3 == 0);
-            next_arg1 = regfile[rs1];
+            next_arg1 = rs1_data;
+            next_uses_rs1 = 1;
             next_arg2 = imm_i_lo;
             next_dst = rsd;
+            next_uses_rsd = 1;
             next_alu_op = ALU_ADD;
             next_br_op = BROP_ALWAYS;
             next_payload = inst_pc;
@@ -221,8 +277,10 @@ module mr_id (
             next_arg1 = inst_pc;
             next_arg2 = imm_b_lo;
             next_alu_op = ALU_ADD;
-            next_payload = regfile[rs1];
-            next_payload2 = regfile[rs2];
+            next_payload = rs1_data;
+            next_payload2 = rs2_data;
+            next_uses_rs1 = 1;
+            next_uses_rs2 = 1;
             case (func3)
                 RVF3_BEQ:  next_br_op = BROP_EQ;
                 RVF3_BNE:  next_br_op = BROP_NE;
