@@ -35,6 +35,8 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 10; i++) {
         top->mr_core->ram->mem[i] = 0x00108093;
     }
+    top->mr_core->ram->mem[10] = 0x00000067;
+
     vluint64_t max_runtime = 10000;
 
     top->rst = 1;           // Set some inputs
