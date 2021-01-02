@@ -32,7 +32,8 @@ module mr_alu (
 
     // Branching
     output reg wb_pc_valid,
-    output reg [`XLEN-1:0] wb_pc
+    output reg [`XLEN-1:0] wb_pc,
+    output reg jmp_done
 );
 
 logic [`XLEN-1:0] next_dest;
@@ -45,7 +46,9 @@ assign id_ready = ls_ready; // We always take one clock... for now.
 always @(posedge clk) begin
     if (rst) begin 
         ls_valid <= 0;
-    end else if (ls_ready) begin
+        wb_pc_valid <= 0;
+        jmp_done <= 0;
+    end else if (ls_ready & id_valid) begin
         ls_dest <= next_dest;
         ls_valid <= id_valid;
         // passthru
@@ -57,8 +60,11 @@ always @(posedge clk) begin
 
         wb_pc <= next_dest;
         wb_pc_valid <= take_branch;
+        jmp_done <= (id_br_op != BROP_NEVER);
     end else begin
         ls_valid <= 0;
+        wb_pc_valid <= 0;
+        jmp_done <= 0;
     end
 end
 

@@ -66,6 +66,7 @@ module mr_core (
     wire wb_reg_valid;
     wire [`REGSEL_BITS-1:0] wb_reg;
     wire [`XLEN-1:0]        wb_reg_data;
+    wire jmp_done;
 
 
     // ID -> ALU
@@ -123,7 +124,7 @@ module mr_core (
         .alu_payload2(id_alu_payload2),
 
         // From WB
-        .wb_valid(wb_reg_valid), .wb_reg(wb_reg), .wb_val(wb_reg_data)
+        .wb_valid(wb_reg_valid), .wb_reg(wb_reg), .wb_val(wb_reg_data), .jmp_done
     );
 
 
@@ -142,7 +143,7 @@ module mr_core (
         .ls_memop(alu_ls_memop), .ls_size(alu_ls_size), .ls_signed(alu_ls_signed), .ls_payload(alu_ls_payload),
 
         // Branching
-        .wb_pc_valid, .wb_pc
+        .wb_pc_valid, .wb_pc, .jmp_done
     );
 
     mr_ldst ldst(clk, rst,

@@ -39,12 +39,15 @@ module mr_ifetch(
     logic [`XLEN-1:0] pc_offset;
     assign pc_offset = 4;
 
+    logic addr_changed;
     always_ff @(posedge clk) begin
-        if (rst)
+        if (rst) begin
             pc <= `RESET_VEC;
-        else if (wb_pc_valid)
+            addr_changed <= 0;
+        end else if (wb_pc_valid) begin
             pc <= wb_pc;
-        else if (id_ready & inst_valid)
+            addr_changed <= cyc_o;
+        end else if (id_ready & inst_valid)
             pc <= pc + pc_offset;
         else
             pc <= pc;
@@ -58,7 +61,7 @@ module mr_ifetch(
         if (reset) begin
             inst_valid <= 0;
         end else if (ack_i & (!stb_o | !stall_i)) begin
-            inst_valid <= 1;
+            inst_valid <= !addr_changed;
             inst_pc <= pc;
             inst <= dat_i;
         end else begin
@@ -96,7 +99,8 @@ module mr_ifetch(
                 // New memory req!
                 cyc_o <= 1;
                 stb_o <= 1;
-                adr_o <= pc[`XLEN-1:`XLEN_GRAN];
+                adr_o <= wb_pc_valid ? wb_pc[`XLEN-1:`XLEN_GRAN] : pc[`XLEN-1:`XLEN_GRAN];
+                addr_changed <= 0;
             end
         end
     end

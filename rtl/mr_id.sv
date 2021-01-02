@@ -25,7 +25,7 @@ module mr_id (
     output [`XLEN-1:0] alu_payload2,
 
     // From WB
-    // input jmp_done,
+    input jmp_done,
     input wb_valid,
     input [`REGSEL_BITS-1:0] wb_reg,
     input [`XLEN-1:0] wb_val
@@ -35,6 +35,8 @@ module mr_id (
 
     logic [31:1][`XLEN-1:0] regfile;
     logic [31:1][1:0] reg_writes_pending;
+    logic has_unresolved_jmp;
+
     logic [`XLEN-1:0] rs1_data;
     assign rs1_data = (rs1 != 0) ? regfile[rs1] : 0;
     logic [`XLEN-1:0] rs2_data;
@@ -51,7 +53,7 @@ module mr_id (
     assign rs2_data_hazard = (next_uses_rs2 & (rs2 != 0) & (rs2_writes_pending != 0));
 
     logic data_hazard;
-    assign data_hazard = rs1_data_hazard || rs2_data_hazard;
+    assign data_hazard = rs1_data_hazard || rs2_data_hazard || has_unresolved_jmp;
 
     logic is_comp;
     assign is_comp = (inst[1:0] != 2'b11);
@@ -80,6 +82,8 @@ module mr_id (
 
     initial begin
         regfile = 0;
+        reg_writes_pending = 0;
+        has_unresolved_jmp = 0;
     end
 
     logic next_alu_valid;
@@ -88,11 +92,13 @@ module mr_id (
         alu_valid <= next_alu_valid;
         if (rst) begin
             reg_writes_pending <= 0;
+
         end
         if (next_alu_valid) begin
             alu_arg1 <= next_arg1;
             alu_arg2 <= next_arg2;
             alu_aluop <= next_alu_op;
+            alu_br_op <= next_br_op;
             alu_dst <= next_dst;
             alu_size <= next_size;
             alu_signed <= next_signed;
@@ -103,11 +109,19 @@ module mr_id (
                 assert(reg_writes_pending[rsd] != 2'b11);
                 reg_writes_pending[rsd] <= reg_writes_pending[rsd] + 1;
             end
+            if (next_br_op != BROP_NEVER) begin
+                assert(has_unresolved_jmp == 0);
+                has_unresolved_jmp <= 1;
+            end
         end
         if (wb_valid && (wb_reg != 0)) begin
             assert(reg_writes_pending[wb_reg] != 0);
             regfile[wb_reg] <= wb_val;
             reg_writes_pending[wb_reg] <= reg_writes_pending[wb_reg] - 1;
+        end
+        if (jmp_done) begin
+            assert(has_unresolved_jmp == 1);
+            has_unresolved_jmp <= 0;
         end
 
         // simultaneous inc and dec hazard counter to same register
