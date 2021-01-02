@@ -1,7 +1,7 @@
 // Taken from Verilator manpage (CC0 license).
 
 #include <verilated.h>          // Defines common routines
-#include <verilated_vcd_c.h>          // Defines common routines
+#include <verilated_fst_c.h>          // Defines common routines
 #include <iostream>             // Need std::cout
 #include "Vmr_core.h"               // From Verilating "top.v"
 
@@ -25,18 +25,21 @@ double sc_time_stamp () {       // Called by $time in Verilog
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);   // Remember args
     Verilated::traceEverOn(true);
-    VerilatedVcdC* tfp = new VerilatedVcdC;
+    VerilatedFstC* tfp = new VerilatedFstC;
 
     top = new Vtop;             // Create instance
     top->trace(tfp, 99);
-    tfp->open("obj_dir/sim.vcd");
+    tfp->open("obj_dir/sim.fst");
 
     memset(top->mr_core->ram->mem, 0xff, sizeof(top->mr_core->ram->mem));
-    top->mr_core->ram->mem[0] = 0x00108093;
+    for (int i = 0; i < 10; i++) {
+        top->mr_core->ram->mem[i] = 0x00108093;
+    }
+    vluint64_t max_runtime = 10000;
 
     top->rst = 1;           // Set some inputs
 
-    while (!Verilated::gotFinish()) {
+    while (!Verilated::gotFinish() && (main_time < max_runtime)) {
         if (main_time > 10) {
             top->rst = 0;   // Deassert reset
         }
