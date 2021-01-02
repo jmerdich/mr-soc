@@ -15,13 +15,14 @@ module mr_id (
     output reg [`XLEN-1:0] alu_arg1,
     output reg [`XLEN-1:0] alu_arg2,
     output reg [`REGSEL_BITS-1:0] alu_dst,
-    output reg alu_dst_pc,
+    output reg [`BR_OP_BITS-1:0] alu_br_op,
     output reg [`ALU_OP_BITS-1:0] alu_aluop,
 
     output [`MEM_OP_BITS-1:0] alu_memop,
     output [`MEM_SZ_BITS-1:0] alu_size,
     output alu_signed, // ignored on store
     output [`XLEN-1:0] alu_payload,
+    output [`XLEN-1:0] alu_payload2,
 
     // From WB
     input wb_valid,
@@ -64,6 +65,7 @@ module mr_id (
         alu_size <= next_size;
         alu_signed <= next_signed;
         alu_payload <= next_payload;
+        alu_payload2 <= next_payload2;
         if (wb_valid) begin
             regfile[wb_reg] <= wb_val;
         end
@@ -72,19 +74,32 @@ module mr_id (
     logic [`XLEN-1:0] next_arg1;
     logic [`XLEN-1:0] next_arg2;
     logic [`XLEN-1:0] next_payload;
+    logic [`XLEN-1:0] next_payload2;
     logic [`ALU_OP_BITS-1:0] next_alu_op;
     logic [`MEM_SZ_BITS-1:0] next_size;
     logic                    next_signed;
     logic [`MEM_OP_BITS-1:0] next_mem_op;
+    logic [`BR_OP_BITS-1:0] next_br_op;
     logic [`REGSEL_BITS-1:0] next_dst;
     logic op_valid;
-    always_comb case(op)
+    always_comb begin 
+        // Sane defaults with no side effects
+        op_valid = 0;
+        next_dst = 0;
+        next_mem_op = MEMOP_NONE;
+        next_alu_op = ALU_ADD;
+        next_br_op = BROP_NEVER;
+        next_arg1 = 0;
+        next_arg2 = 0;
+        next_payload = 0;
+        next_payload2 = 0;
+
+        case(op)
         RV_OP_IMM: begin
             op_valid = 1;
             next_arg1 = regfile[rs1];
             next_arg2 = { imm_i_lo};
             next_dst = rsd;
-            next_mem_op = MEMOP_NONE;
             case (func3)
                 RVF3_ADD: next_alu_op = ALU_ADD; // Note no subtract here
                 RVF3_SLT: next_alu_op = ALU_CMP_LT;
@@ -101,7 +116,6 @@ module mr_id (
             next_arg1 = regfile[rs1];
             next_arg2 = regfile[rs2];
             next_dst = rsd;
-            next_mem_op = MEMOP_NONE;
             case (func3)
                 RVF3_ADD: next_alu_op = (inv ? ALU_SUB : ALU_ADD);
                 RVF3_SLT: next_alu_op = ALU_CMP_LT;
@@ -118,7 +132,6 @@ module mr_id (
             next_arg1 = 0;
             next_arg2 = imm_u_lo;
             next_dst = rsd;
-            next_mem_op = MEMOP_NONE;
             next_alu_op = ALU_ADD;
         end
         RV_AUIPC: begin
@@ -126,7 +139,6 @@ module mr_id (
             next_arg1 = inst_pc;
             next_arg2 = imm_u_lo;
             next_dst = rsd;
-            next_mem_op = MEMOP_NONE;
             next_alu_op = ALU_ADD;
         end
         RV_STORE: begin
@@ -152,7 +164,7 @@ module mr_id (
         RV_LOAD: begin
             next_arg1 = regfile[rs1];
             next_arg2 = imm_s_lo;
-            next_dst = 0;
+            next_dst = rsd;
             next_alu_op = ALU_ADD; // Use ALU for addr calc
             next_payload = regfile[rs2];
 
@@ -186,10 +198,46 @@ module mr_id (
                 default: op_valid = 0;
             endcase
         end
+        RV_JAL: begin
+            op_valid = 1;
+            next_arg1 = inst_pc;
+            next_arg2 = imm_j_lo;
+            next_dst = rsd;
+            next_alu_op = ALU_ADD;
+            next_br_op = BROP_ALWAYS;
+            next_payload = inst_pc;
+        end
+        RV_JALR: begin
+            op_valid = (func3 == 0);
+            next_arg1 = regfile[rs1];
+            next_arg2 = imm_i_lo;
+            next_dst = rsd;
+            next_alu_op = ALU_ADD;
+            next_br_op = BROP_ALWAYS;
+            next_payload = inst_pc;
+        end
+        RV_BRANCH: begin
+            op_valid = 1;
+            next_arg1 = inst_pc;
+            next_arg2 = imm_b_lo;
+            next_alu_op = ALU_ADD;
+            next_payload = regfile[rs1];
+            next_payload2 = regfile[rs2];
+            case (func3)
+                RVF3_BEQ:  next_br_op = BROP_EQ;
+                RVF3_BNE:  next_br_op = BROP_NE;
+                RVF3_BLT:  next_br_op = BROP_LT;
+                RVF3_BGE:  next_br_op = BROP_GE;
+                RVF3_BLTU: next_br_op = BROP_LTU;
+                RVF3_BGEU: next_br_op = BROP_GEU;
+                default: op_valid = 0;
+            endcase
+        end
         default: begin
             // What is this?
             op_valid = 0;
         end
     endcase
+    end
 
 endmodule

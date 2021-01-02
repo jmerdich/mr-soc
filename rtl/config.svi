@@ -37,6 +37,18 @@ typedef enum logic [`ALU_OP_BITS-1:0] {
     ALU_CMP_LTU
 } e_aluops;
 
+`define BR_OP_BITS 3
+typedef enum logic [`BR_OP_BITS-1:0] { 
+    BROP_NEVER,
+    BROP_ALWAYS, // Implicit "payload += 4"
+    BROP_EQ,
+    BROP_NE,
+    BROP_LT,
+    BROP_LTU,
+    BROP_GE,
+    BROP_GEU
+ } e_brops;
+
 `define MEM_OP_BITS 2
 typedef enum logic [`MEM_OP_BITS-1:0] {
     MEMOP_NONE,
@@ -110,10 +122,18 @@ typedef enum logic [2:0] {
     RVF3_UHALF = 3'b101,
     // rv64 only:
     RVF3_QUAD = 3'b011,
-    RVF3_UWORD = 3'b110,
-    // ???
-    RVF3_RSVD_111 = 3'b111
+    RVF3_UWORD = 3'b110
 } e_rvf3_mem;
+
+typedef enum logic [2:0] { 
+    // Conditional branch types
+    RVF3_BEQ  = 3'b000,
+    RVF3_BNE  = 3'b001,
+    RVF3_BLT  = 3'b100,
+    RVF3_BGE  = 3'b101,
+    RVF3_BLTU = 3'b110,
+    RVF3_BGEU = 3'b111
+} e_rvf3_br;
 
 
 `endif // MR_CONFIG_I

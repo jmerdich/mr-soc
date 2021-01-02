@@ -60,7 +60,7 @@ module mr_core (
 
     // WB -> IF
     wire [`XLEN-1:0] wb_pc;
-    wire wb_pc_valid = 0;
+    wire wb_pc_valid;
 
     // WB -> ID
     wire wb_reg_valid;
@@ -71,7 +71,7 @@ module mr_core (
     // ID -> ALU
     wire id_valid;
     wire alu_ready;
-    wire id_alu_dst_pc;
+    wire [`BR_OP_BITS-1:0]  id_alu_brop;
     wire [`XLEN-1:0]        id_alu_arg1;
     wire [`XLEN-1:0]        id_alu_arg2;
     wire [`REGSEL_BITS-1:0] id_alu_dst;
@@ -82,6 +82,7 @@ module mr_core (
     wire [`MEM_OP_BITS-1:0] id_alu_memop;
     wire [`MEM_SZ_BITS-1:0] id_alu_size;
     wire [`XLEN-1:0] id_alu_payload;
+    wire [`XLEN-1:0] id_alu_payload2;
 
     // ALU -> LDST
     wire ls_ready;
@@ -115,10 +116,11 @@ module mr_core (
 
         // Forwards to ALU
         .alu_valid(id_valid), .alu_ready, .alu_arg1(id_alu_arg1), .alu_arg2(id_alu_arg2), .alu_dst(id_alu_dst),
-        .alu_dst_pc(id_alu_dst_pc), .alu_aluop(id_alu_aluop),
+        .alu_br_op(id_alu_brop), .alu_aluop(id_alu_aluop),
 
         // Forwards to ALU->LDST
         .alu_memop(id_alu_memop), .alu_size(id_alu_size), .alu_signed(id_alu_signed), .alu_payload(id_alu_payload),
+        .alu_payload2(id_alu_payload2),
 
         // From WB
         .wb_valid(wb_reg_valid), .wb_reg(wb_reg), .wb_val(wb_reg_data)
@@ -129,14 +131,18 @@ module mr_core (
 
         // Backwards from ID
         .id_valid(id_valid), .id_ready(alu_ready), .id_arg1(id_alu_arg1), .id_arg2(id_alu_arg2), .id_dest_reg(id_alu_dst),
-        .id_dst_pc(id_alu_dst_pc), .id_aluop(id_alu_aluop),
+        .id_br_op(id_alu_brop), .id_aluop(id_alu_aluop),
 
         // Backwards from ID, passed thru
         .id_memop(id_alu_memop), .id_size(id_alu_size), .id_signed(id_alu_signed), .id_payload(id_alu_payload),
+        .id_payload2(id_alu_payload2),
 
         // Forwards to LDST 
         .ls_valid(alu_ls_valid), .ls_ready(ls_ready), .ls_dest(alu_ls_dest), .ls_dest_reg(alu_ls_dest_reg),
-        .ls_memop(alu_ls_memop), .ls_size(alu_ls_size), .ls_signed(alu_ls_signed), .ls_payload(alu_ls_payload)
+        .ls_memop(alu_ls_memop), .ls_size(alu_ls_size), .ls_signed(alu_ls_signed), .ls_payload(alu_ls_payload),
+
+        // Branching
+        .wb_pc_valid, .wb_pc
     );
 
     mr_ldst ldst(clk, rst,
