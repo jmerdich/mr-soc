@@ -35,25 +35,28 @@ module mr_id (
 
     logic [31:1][`XLEN-1:0] regfile;
     logic [31:1][1:0] reg_writes_pending;
-    logic [`XLEN-1:0] rs1_data = (rs1 != 0) ? regfile[rs1] : 0;
-    logic [`XLEN-1:0] rs2_data = (rs2 != 0) ? regfile[rs2] : 0;
+    logic [`XLEN-1:0] rs1_data;
+    assign rs1_data = (rs1 != 0) ? regfile[rs1] : 0;
+    logic [`XLEN-1:0] rs2_data;
+    assign rs2_data = (rs2 != 0) ? regfile[rs2] : 0;
     // hazard detection
 
-    logic [1:0] rs1_writes_pending = reg_writes_pending[rs1];
-    logic [1:0] rs2_writes_pending = reg_writes_pending[rs2];
-    logic rs1_data_hazard = (next_uses_rs1 & (rs1 != 0) & (rs1_writes_pending != 0));
-    logic rs2_data_hazard = (next_uses_rs2 & (rs2 != 0) & (rs2_writes_pending != 0));
+    logic [1:0] rs1_writes_pending;
+    assign rs1_writes_pending = reg_writes_pending[rs1];
+    logic [1:0] rs2_writes_pending;
+    assign rs2_writes_pending = reg_writes_pending[rs2];
+    logic rs1_data_hazard;
+    assign rs1_data_hazard = (next_uses_rs1 & (rs1 != 0) & (rs1_writes_pending != 0));
+    logic rs2_data_hazard;
+    assign rs2_data_hazard = (next_uses_rs2 & (rs2 != 0) & (rs2_writes_pending != 0));
 
-//`define REPRO
-`ifdef REPRO
-    logic data_hazard = rs1_data_hazard || rs2_data_hazard;
-`else
     logic data_hazard;
     assign data_hazard = rs1_data_hazard || rs2_data_hazard;
-`endif
 
-    logic is_comp = (inst[1:0] != 2'b11);
-    logic len_valid = (inst[4:2] != 3'b111) && (!is_comp || (`IALIGN == 16));
+    logic is_comp;
+    assign is_comp = (inst[1:0] != 2'b11);
+    logic len_valid;
+    assign len_valid = (inst[4:2] != 3'b111) && (!is_comp || (`IALIGN == 16));
 
     logic [4:0] op = inst[6:2];
     logic [2:0] func3 = inst[14:12];
@@ -64,11 +67,16 @@ module mr_id (
     logic [4:0] rs1 = inst[19:15];
     logic [4:0] rsd = inst[11:7];
 
-    logic [32-1:0] imm_i_lo = { {21{ext}}, inst[30:25], inst[24:21], inst[20]};
-    logic [32-1:0] imm_s_lo = { {21{ext}}, inst[30:25], inst[11:8], inst[7]};
-    logic [32-1:0] imm_b_lo = { {20{ext}}, inst[7], inst[30:25], inst[11:8], 1'b0};
-    logic [32-1:0] imm_u_lo = { inst[31:12], 12'b0};
-    logic [32-1:0] imm_j_lo = { {12{ext}}, inst[19:12], inst[20], inst[30:25], inst[24:21], 1'b0};
+    logic [32-1:0] imm_i_lo;
+    assign imm_i_lo = { {21{ext}}, inst[30:25], inst[24:21], inst[20]};
+    logic [32-1:0] imm_s_lo;
+    assign imm_s_lo = { {21{ext}}, inst[30:25], inst[11:8], inst[7]};
+    logic [32-1:0] imm_b_lo;
+    assign imm_b_lo = { {20{ext}}, inst[7], inst[30:25], inst[11:8], 1'b0};
+    logic [32-1:0] imm_u_lo;
+    assign imm_u_lo = { inst[31:12], 12'b0};
+    logic [32-1:0] imm_j_lo;
+    assign imm_j_lo = { {12{ext}}, inst[19:12], inst[20], inst[30:25], inst[24:21], 1'b0};
 
     initial begin
         regfile = 0;

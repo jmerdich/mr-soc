@@ -75,8 +75,10 @@ end
 
 assign ex_ready_o = !cyc_o;
 
-wire [`XLEN/8-1:0] sel = 4'b1111; // TODO: handle non-dwords
-wire [`XLEN-1:0] shifted_dat_i = dat_i; // TODO: shifts and sign-ext
+wire [`XLEN/8-1:0] sel;
+assign sel = 4'b1111; // TODO: handle non-dwords
+wire [`XLEN-1:0] shifted_dat_i;
+assign shifted_dat_i = dat_i; // TODO: shifts and sign-ext
 
 // Data sending logic
 always_ff @(posedge clk) begin

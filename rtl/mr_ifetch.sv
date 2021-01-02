@@ -36,7 +36,8 @@ module mr_ifetch(
         pc = `RESET_VEC;
     end
 
-    logic [`XLEN-1:0] pc_offset = 4;
+    logic [`XLEN-1:0] pc_offset;
+    assign pc_offset = 4;
 
     always_ff @(posedge clk) begin
         if (rst)

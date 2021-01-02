@@ -18,7 +18,8 @@ module simple_mem(
     reg [`XLEN-1:0] mem [`MEMSIZE/`XLEN_BYTES-1:0]  /* verilator public */;
     assign stall_o = 0;
 
-    wire [$clog2(`MEMSIZE/`XLEN_BYTES)-1:0] addr = addr_i[$clog2(`MEMSIZE)-1:`XLEN_GRAN];
+    wire [$clog2(`MEMSIZE/`XLEN_BYTES)-1:0] addr;
+    assign addr = addr_i[$clog2(`MEMSIZE)-1:`XLEN_GRAN];
 
 `ifndef VERILATOR
     // If using verilator, rely on C++ TB to set this up.

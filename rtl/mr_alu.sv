@@ -36,7 +36,8 @@ module mr_alu (
 );
 
 logic [`XLEN-1:0] next_dest;
-logic [`XLEN-1:0] next_payload = (id_br_op == BROP_ALWAYS) ? id_payload + 4 : id_payload;
+logic [`XLEN-1:0] next_payload;
+assign next_payload = (id_br_op == BROP_ALWAYS) ? id_payload + 4 : id_payload;
 logic             take_branch;
 
 assign id_ready = ls_ready; // We always take one clock... for now.
