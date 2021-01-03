@@ -18,9 +18,8 @@
 //TODO: Add code here to run after all tests have been run
 // The .align 4 ensures that the signature begins at a 16-byte boundary
 #define RVMODEL_HALT                                              \
-  .word 0xFFFFFFFF \
-  li x29, 1 \
-  sw x29, hosthalt, x30 \
+  li x29, 1; \
+  sw x29, hosthalt, x30; \
   self_loop:  j self_loop;
 
 //TODO: declare the start of your signature region here. Nothing else to be used here.

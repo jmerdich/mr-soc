@@ -38,6 +38,10 @@ ver: ${OUTFILE}
 run: ver
 	./${OUTFILE} ${RUNARGS}
 
+.PHONY: compclean
+compclean:
+	rm -rf extern/riscv-compliance/work
+
 .PHONY: clean
 clean:
 	rm -rf obj_dir

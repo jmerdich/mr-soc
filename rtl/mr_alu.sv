@@ -37,8 +37,8 @@ module mr_alu (
 );
 
 logic [`XLEN-1:0] next_dest;
-logic [`XLEN-1:0] next_payload;
-assign next_payload = (id_br_op == BROP_ALWAYS) ? id_payload + 4 : id_payload;
+logic [`XLEN-1:0] alu_res;
+assign next_dest = (id_br_op == BROP_ALWAYS) ? id_payload + 4 : id_payload;
 logic             take_branch;
 
 assign id_ready = ls_ready; // We always take one clock... for now.
@@ -56,9 +56,9 @@ always @(posedge clk) begin
         ls_memop <= id_memop;
         ls_size <= id_size;
         ls_signed <= id_signed;
-        ls_payload <= next_payload;
+        ls_payload <= id_payload;
 
-        wb_pc <= next_dest;
+        wb_pc <= alu_res;
         wb_pc_valid <= take_branch;
         jmp_done <= (id_br_op != BROP_NEVER);
     end else begin
@@ -70,23 +70,23 @@ end
 
 always_comb begin 
     unique case (id_aluop)
-        ALU_ADD: next_dest = id_arg1 + id_arg2;
-        ALU_SUB: next_dest = id_arg1 - id_arg2;
-        ALU_AND: next_dest = id_arg1 & id_arg2;
-        ALU_OR:  next_dest = id_arg1 | id_arg2;
-        ALU_XOR: next_dest = id_arg1 ^ id_arg2;
-        ALU_SH_L: next_dest = id_arg1 << id_arg2;
-        ALU_SH_RA: next_dest = id_arg1 >>> id_arg2;
-        ALU_SH_RL: next_dest = id_arg1 >> id_arg2;
+        ALU_ADD: alu_res = id_arg1 + id_arg2;
+        ALU_SUB: alu_res = id_arg1 - id_arg2;
+        ALU_AND: alu_res = id_arg1 & id_arg2;
+        ALU_OR:  alu_res = id_arg1 | id_arg2;
+        ALU_XOR: alu_res = id_arg1 ^ id_arg2;
+        ALU_SH_L: alu_res = id_arg1 << id_arg2;
+        ALU_SH_RA: alu_res = id_arg1 >>> id_arg2;
+        ALU_SH_RL: alu_res = id_arg1 >> id_arg2;
         ALU_CMP_LTU: begin
-           next_dest[`XLEN-1:1] = 0;
-           next_dest[0] = (id_arg1 < id_arg2);
+           alu_res[`XLEN-1:1] = 0;
+           alu_res[0] = (id_arg1 < id_arg2);
         end
         ALU_CMP_LT: begin
-           next_dest[`XLEN-1:1] = 0;
-           next_dest[0] = ($signed(id_arg1) < $signed(id_arg2));
+           alu_res[`XLEN-1:1] = 0;
+           alu_res[0] = ($signed(id_arg1) < $signed(id_arg2));
         end
-        default: next_dest = 0;
+        default: alu_res = 0;
     endcase
 end
 

@@ -99,6 +99,7 @@ module mr_id (
             alu_arg2 <= next_arg2;
             alu_aluop <= next_alu_op;
             alu_br_op <= next_br_op;
+            alu_memop <= next_mem_op;
             alu_dst <= next_dst;
             alu_size <= next_size;
             alu_signed <= next_signed;
@@ -243,7 +244,7 @@ module mr_id (
             next_uses_rsd = 1;
             next_alu_op = ALU_ADD; // Use ALU for addr calc
 
-            next_mem_op = MEMOP_STORE;
+            next_mem_op = MEMOP_LOAD;
             case (func3)
                 RVF3_BYTE: begin
                     next_size = MEMSZ_1B;
