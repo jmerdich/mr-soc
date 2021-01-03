@@ -8,10 +8,10 @@ module mr_alu (
     input [`XLEN-1:0] id_arg2,
     input e_aluops id_aluop,
     input [`REGSEL_BITS-1:0] id_dest_reg,
-    input [`BR_OP_BITS-1:0] id_br_op,
+    input e_brops id_br_op,
 
-    input [`MEM_OP_BITS-1:0] id_memop,
-    input [`MEM_SZ_BITS-1:0] id_size,
+    input e_memops id_memop,
+    input e_memsz id_size,
     input id_signed,
     input [`XLEN-1:0] id_payload,
     input [`XLEN-1:0] id_payload2,
@@ -25,8 +25,8 @@ module mr_alu (
     output reg [`XLEN-1:0] ls_dest,
     output reg [`REGSEL_BITS-1:0] ls_dest_reg,
 
-    output [`MEM_OP_BITS-1:0] ls_memop,
-    output [`MEM_SZ_BITS-1:0] ls_size,
+    output e_memops ls_memop,
+    output e_memsz ls_size,
     output ls_signed,
     output [`XLEN-1:0] ls_payload,
 

@@ -23,8 +23,8 @@
 `define IMAXLEN 32
 `define REGSEL_BITS 5
 
-`define ALU_OP_BITS 5
-typedef enum logic [`ALU_OP_BITS-1:0] {
+`define E_ALU_OP_BITS 5
+typedef enum logic [`E_ALU_OP_BITS-1:0] {
     ALU_ADD,
     ALU_SUB,
     ALU_AND,
@@ -37,8 +37,8 @@ typedef enum logic [`ALU_OP_BITS-1:0] {
     ALU_CMP_LTU
 } e_aluops;
 
-`define BR_OP_BITS 3
-typedef enum logic [`BR_OP_BITS-1:0] { 
+`define E_BR_OP_BITS 3
+typedef enum logic [`E_BR_OP_BITS-1:0] { 
     BROP_NEVER,
     BROP_ALWAYS, // Implicit "payload += 4"
     BROP_EQ,
@@ -49,15 +49,15 @@ typedef enum logic [`BR_OP_BITS-1:0] {
     BROP_GEU
  } e_brops;
 
-`define MEM_OP_BITS 2
-typedef enum logic [`MEM_OP_BITS-1:0] {
+`define E_MEM_OP_BITS 2
+typedef enum logic [`E_MEM_OP_BITS-1:0] {
     MEMOP_NONE,
     MEMOP_LOAD,
     MEMOP_STORE
 } e_memops;
 
-`define MEM_SZ_BITS 2
-typedef enum logic [`MEM_SZ_BITS-1:0] {
+`define E_MEM_SZ_BITS 2
+typedef enum logic [`E_MEM_SZ_BITS-1:0] {
     MEMSZ_1B = 0,
     MEMSZ_2B = 1,
     MEMSZ_4B = 2,

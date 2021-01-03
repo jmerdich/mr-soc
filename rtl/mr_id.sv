@@ -15,11 +15,11 @@ module mr_id (
     output reg [`XLEN-1:0] alu_arg1,
     output reg [`XLEN-1:0] alu_arg2,
     output reg [`REGSEL_BITS-1:0] alu_dst,
-    output reg [`BR_OP_BITS-1:0] alu_br_op,
-    output reg [`ALU_OP_BITS-1:0] alu_aluop,
+    output e_brops alu_br_op,
+    output e_aluops alu_aluop,
 
-    output [`MEM_OP_BITS-1:0] alu_memop,
-    output [`MEM_SZ_BITS-1:0] alu_size,
+    output e_memops alu_memop,
+    output e_memsz alu_size,
     output alu_signed, // ignored on store
     output [`XLEN-1:0] alu_payload,
     output [`XLEN-1:0] alu_payload2,
@@ -60,8 +60,11 @@ module mr_id (
     logic len_valid;
     assign len_valid = (inst[4:2] != 3'b111) && (!is_comp || (`IALIGN == 16));
 
-    logic [4:0] op = inst[6:2];
+    e_rvop op = inst[6:2];
     logic [2:0] func3 = inst[14:12];
+    e_rvf3_alu func3_alu = inst[14:12];
+    e_rvf3_mem func3_mem = inst[14:12];
+    e_rvf3_br func3_br = inst[14:12];
     logic [6:0] func7 = inst[31:25];
     logic inv = func7[5]; // denotes 'sub' or arith-shift
     logic ext = inst[31];
@@ -135,11 +138,11 @@ module mr_id (
     logic [`XLEN-1:0] next_arg2;
     logic [`XLEN-1:0] next_payload;
     logic [`XLEN-1:0] next_payload2;
-    logic [`ALU_OP_BITS-1:0] next_alu_op;
-    logic [`MEM_SZ_BITS-1:0] next_size;
+    e_aluops next_alu_op;
+    e_memsz next_size;
     logic                    next_signed;
-    logic [`MEM_OP_BITS-1:0] next_mem_op;
-    logic [`BR_OP_BITS-1:0] next_br_op;
+    e_memops next_mem_op;
+    e_brops next_br_op;
     logic [`REGSEL_BITS-1:0] next_dst;
     logic next_uses_rs1;
     logic next_uses_rs2;
@@ -168,7 +171,7 @@ module mr_id (
             next_arg2 = { imm_i_lo};
             next_dst = rsd;
             next_uses_rsd = 1;
-            case (func3)
+            case (func3_alu)
                 RVF3_ADD: next_alu_op = ALU_ADD; // Note no subtract here
                 RVF3_SLT: next_alu_op = ALU_CMP_LT;
                 RVF3_SLTU: next_alu_op = ALU_CMP_LTU;
@@ -187,7 +190,7 @@ module mr_id (
             next_uses_rs1 = 1;
             next_uses_rs2 = 1;
             next_uses_rsd = 1;
-            case (func3)
+            case (func3_alu)
                 RVF3_ADD: next_alu_op = (inv ? ALU_SUB : ALU_ADD);
                 RVF3_SLT: next_alu_op = ALU_CMP_LT;
                 RVF3_SLTU: next_alu_op = ALU_CMP_LTU;
@@ -226,7 +229,7 @@ module mr_id (
             next_uses_rs2 = 1;
 
             next_mem_op = MEMOP_STORE;
-            case (func3)
+            case (func3_mem)
                 RVF3_BYTE: next_size = MEMSZ_1B;
                 RVF3_HALF: next_size = MEMSZ_2B;
                 RVF3_WORD: next_size = MEMSZ_4B;
@@ -245,7 +248,7 @@ module mr_id (
             next_alu_op = ALU_ADD; // Use ALU for addr calc
 
             next_mem_op = MEMOP_LOAD;
-            case (func3)
+            case (func3_mem)
                 RVF3_BYTE: begin
                     next_size = MEMSZ_1B;
                     next_signed = 1;
@@ -304,7 +307,7 @@ module mr_id (
             next_payload2 = rs2_data;
             next_uses_rs1 = 1;
             next_uses_rs2 = 1;
-            case (func3)
+            case (func3_br)
                 RVF3_BEQ:  next_br_op = BROP_EQ;
                 RVF3_BNE:  next_br_op = BROP_NE;
                 RVF3_BLT:  next_br_op = BROP_LT;

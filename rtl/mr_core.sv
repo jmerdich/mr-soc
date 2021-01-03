@@ -72,16 +72,16 @@ module mr_core (
     // ID -> ALU
     wire id_valid;
     wire alu_ready;
-    wire [`BR_OP_BITS-1:0]  id_alu_brop;
+    e_brops  id_alu_brop;
     wire [`XLEN-1:0]        id_alu_arg1;
     wire [`XLEN-1:0]        id_alu_arg2;
     wire [`REGSEL_BITS-1:0] id_alu_dst;
-    wire [`ALU_OP_BITS-1:0] id_alu_aluop;
+    e_aluops id_alu_aluop;
 
     // ID -> ALU (-> LDST)
     wire id_alu_signed;
-    wire [`MEM_OP_BITS-1:0] id_alu_memop;
-    wire [`MEM_SZ_BITS-1:0] id_alu_size;
+    e_memops id_alu_memop;
+    e_memsz id_alu_size;
     wire [`XLEN-1:0] id_alu_payload;
     wire [`XLEN-1:0] id_alu_payload2;
 
@@ -91,8 +91,8 @@ module mr_core (
     wire alu_ls_signed;
     wire [`XLEN-1:0]        alu_ls_dest;
     wire [`REGSEL_BITS-1:0] alu_ls_dest_reg;
-    wire [`MEM_OP_BITS-1:0] alu_ls_memop;
-    wire [`MEM_SZ_BITS-1:0] alu_ls_size;
+    e_memops alu_ls_memop;
+    e_memsz alu_ls_size;
     wire [`XLEN-1:0]        alu_ls_payload;
 
     assign wbm0_dat_i = 0;

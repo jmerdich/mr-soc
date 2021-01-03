@@ -5,8 +5,8 @@ module mr_ldst(
     input clk, rst,
 
     // From prev
-    input [`MEM_OP_BITS-1:0] ex_op_i,
-    input [`MEM_SZ_BITS-1:0] ex_size_i,
+    input e_memops ex_op_i,
+    input e_memsz ex_size_i,
     input ex_signed_i,
     input [`XLEN-1:0] ex_addr_i,
     input [`XLEN-1:0] ex_payload_i,
@@ -35,7 +35,7 @@ module mr_ldst(
 );
 
 // Metadata on active transaction
-logic [`MEM_SZ_BITS-1:0] size_pending;
+e_memsz size_pending;
 logic signed_pending;
 logic [`REGSEL_BITS-1:0] dst_reg_pending;
 

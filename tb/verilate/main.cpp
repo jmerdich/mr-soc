@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <iostream>
 
 // Common verilator headers
@@ -22,7 +23,10 @@
 
 #define Vtop Vmr_core
 
-Vtop *top;                      // Instantiation of module
+Vtop *top = nullptr;                      // Instantiation of module
+VerilatedFstC* tfp = nullptr;
+
+bool active = true;
 
 vluint64_t main_time = 0;       // Current simulation time
 // This is a 64-bit integer to reduce wrap over issues and
@@ -34,10 +38,14 @@ double sc_time_stamp () {       // Called by $time in Verilog
                                 // what SystemC does
 }
 
+void closeGracefully(int dummy) {
+    active = false;
+}
+
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);   // Remember args
     Verilated::traceEverOn(true);
-    VerilatedFstC* tfp = new VerilatedFstC;
+    tfp = new VerilatedFstC;
 
     cxxopts::Options options(argv[0], "Mr. SOC RISC-V machine");
 
@@ -59,6 +67,8 @@ int main(int argc, char** argv) {
         std::cout << options.help() << std::endl;
         exit(0);
     }
+
+    signal(SIGINT, closeGracefully);
 
     top = new Vtop;             // Create instance
     top->trace(tfp, 99);
@@ -124,7 +134,8 @@ int main(int argc, char** argv) {
 
     while (!Verilated::gotFinish() &&
            ((max_runtime < 0) || (main_time < max_runtime)) &&
-           ((halt_addr < 0) || (top->mr_core->ram->mem[halt_addr/4] == 0))) {
+           ((halt_addr < 0) || (top->mr_core->ram->mem[halt_addr/4] == 0)) &&
+           (active)) {
         if (main_time > 10) {
             top->rst = 0;   // Deassert reset
         }
@@ -150,6 +161,9 @@ int main(int argc, char** argv) {
     top->final();               // Done simulating
     //    // (Though this example doesn't get here)
 
+    if (!active) {
+        std::cout << "Simulation got SIGINT after " << main_time << " clocks." << std::endl;
+    }
     if (Verilated::gotFinish()) {
         std::cout << "Simulation received $finish() after " << main_time << " clocks." << std::endl;
     }
@@ -164,5 +178,8 @@ int main(int argc, char** argv) {
         std::cout << std::dec;
     }
 
+    delete tfp;
+    tfp = nullptr;
     delete top;
+    top = nullptr;
 }
