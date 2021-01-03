@@ -109,11 +109,11 @@ module mr_id (
             alu_payload <= next_payload;
             alu_payload2 <= next_payload2;
 
-            if (next_uses_rsd && rsd != 0) begin
+            if (alu_ready && next_uses_rsd && rsd != 0) begin
                 assert(reg_writes_pending[rsd] != 2'b11);
                 reg_writes_pending[rsd] <= reg_writes_pending[rsd] + 1;
             end
-            if (next_br_op != BROP_NEVER) begin
+            if (alu_ready && next_br_op != BROP_NEVER) begin
                 assert(has_unresolved_jmp == 0);
                 has_unresolved_jmp <= 1;
             end
@@ -129,7 +129,7 @@ module mr_id (
         end
 
         // simultaneous inc and dec hazard counter to same register
-        if (next_alu_valid & wb_valid & next_uses_rsd & rsd != 0 & wb_reg != 0 & wb_reg == rsd) begin
+        if (next_alu_valid & alu_ready & wb_valid & next_uses_rsd & rsd != 0 & wb_reg != 0 & wb_reg == rsd) begin
             reg_writes_pending[wb_reg] <= reg_writes_pending[wb_reg];
         end
     end
@@ -320,8 +320,8 @@ module mr_id (
         default: begin
             // What is this?
             op_valid = 0;
-            $display("Illegal OP!");
-            $finish();
+            if (inst_valid)
+                $display("Illegal OP! Time=%0t, Inst: %0h, PC: %0h", $time, inst, inst_pc);
         end
     endcase
     end
