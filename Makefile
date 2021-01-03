@@ -2,6 +2,7 @@
 # TOOLS:
 VERILATOR = verilator
 
+export PATH:=/opt/riscv32/bin:${PATH}
 
 # ENV/CONFIG
 VERILATOR_ARGS = --top-module ${TOP_MODULE} ${VERILATOR_WARNS} $(addprefix -I,${V_INCLUDE_DIRS})
@@ -40,3 +41,8 @@ run: ver
 .PHONY: clean
 clean:
 	rm -rf obj_dir
+	rm -rf extern/riscv-compliance/work
+
+.PHONY: comp
+comp: ver
+	${MAKE} -C extern/riscv-compliance TARGETDIR=$(abspath tb/compliance) RISCV_TARGET=mr_soc XLEN=32 TARGET_SIM=$(abspath ${OUTFILE}) VERBOSE=1

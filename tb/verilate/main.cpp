@@ -47,6 +47,7 @@ int main(int argc, char** argv) {
         ("trace-file", "Output trace file", cxxopts::value<std::string>()->default_value("obj_dir/sim.fst"))
         ("e,entrypoint", "Entrypoint to start execution at", cxxopts::value<uint64_t>()->default_value("0"))
         ("halt-addr", "Address to check to see if finished", cxxopts::value<int64_t>()->default_value("-1"))
+        ("putc-addr", "Address to write bytes to", cxxopts::value<int64_t>()->default_value("-1"))
         ("t,time-limit", "Time limit in cycles", cxxopts::value<int64_t>()->default_value("10000"))
         ;
 
@@ -64,6 +65,7 @@ int main(int argc, char** argv) {
     tfp->open(result["trace-file"].as<std::string>().c_str());
 
 
+    const uint64_t max_size = 32*1024*1024; // TODO: get this automatically
     memset(top->mr_core->ram->mem, 0x00, sizeof(top->mr_core->ram->mem));
     if (result["file"].count() != 0) {
         // Can I just point out how much easier this is in rust?
@@ -71,10 +73,9 @@ int main(int argc, char** argv) {
 
         int fd = open(result["file"].as<std::string>().c_str(), O_RDONLY);
         if (fd < 0) {
-            std::cout << "File failed to open!!!" << std::endl;
+            std::cout << "Code file '" << result["file"].as<std::string>().c_str() << "' failed to open!!!" << std::endl;
             exit(1);
         }
-        const uint64_t max_size = 32*1024*1024; // TODO: get this automatically
         struct stat stat_buf = {};
         int retval = fstat(fd, &stat_buf);
         assert(retval == 0);
@@ -113,6 +114,11 @@ int main(int argc, char** argv) {
 
     int64_t max_runtime = result["time-limit"].as<int64_t>();
     int64_t halt_addr = result["halt-addr"].as<int64_t>();
+    int64_t putc_addr = result["putc-addr"].as<int64_t>();
+    assert(halt_addr < max_size);
+    assert(putc_addr < max_size);
+    assert((halt_addr & 0x3) == 0); // alignment ok?
+    assert((putc_addr & 0x3) == 0); // alignment ok?
 
     top->rst = 1;           // Set some inputs
 
@@ -130,6 +136,13 @@ int main(int argc, char** argv) {
         }
         top->eval();            // Evaluate model
         tfp->dump(main_time);
+        if ((putc_addr >= 0) && (top->mr_core->ram->mem[putc_addr/4] != 0))
+        {
+            uint32_t data = top->mr_core->ram->mem[putc_addr/4];
+            assert(data == (data & 0xff));
+            putc(data & 0xFF, stdout);
+            top->mr_core->ram->mem[putc_addr/4] = 0;
+        }
         main_time++;            // Time passes...
     }
 

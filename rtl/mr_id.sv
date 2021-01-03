@@ -316,6 +316,8 @@ module mr_id (
         default: begin
             // What is this?
             op_valid = 0;
+            $display("Illegal OP!");
+            $finish();
         end
     endcase
     end

@@ -5,3 +5,6 @@
 	path = extern/cxxopts
 	url = https://github.com/jarro2783/cxxopts
 	branch = v2_2
+[submodule "extern/riscv-compliance"]
+	path = extern/riscv-compliance
+	url = https://github.com/riscv/riscv-compliance
