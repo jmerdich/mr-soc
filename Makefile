@@ -35,7 +35,7 @@ ver: ${OUTFILE}
 
 .PHONY: run
 run: ver
-	./${OUTFILE}
+	./${OUTFILE} ${RUNARGS}
 
 .PHONY: clean
 clean:

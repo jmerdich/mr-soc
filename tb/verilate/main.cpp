@@ -39,9 +39,10 @@ int main(int argc, char** argv) {
     Verilated::traceEverOn(true);
     VerilatedFstC* tfp = new VerilatedFstC;
 
-    cxxopts::Options options("MrSoc", "Mr. SOC RISC-V machine");
+    cxxopts::Options options(argv[0], "Mr. SOC RISC-V machine");
 
     options.add_options()
+        ("h,help", "Print usage")
         ("f,file", "Binary file to run", cxxopts::value<std::string>())
         ("trace-file", "Output trace file", cxxopts::value<std::string>()->default_value("obj_dir/sim.fst"))
         ("e,entrypoint", "Entrypoint to start execution at", cxxopts::value<uint64_t>()->default_value("0"))
@@ -52,6 +53,11 @@ int main(int argc, char** argv) {
     options.allow_unrecognised_options();
 
     auto result = options.parse(argc, argv);
+
+    if (result.count("help")) {
+        std::cout << options.help() << std::endl;
+        exit(0);
+    }
 
     top = new Vtop;             // Create instance
     top->trace(tfp, 99);
