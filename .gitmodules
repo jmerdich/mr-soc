@@ -1,3 +1,7 @@
 [submodule "extern/wb2axip"]
 	path = extern/wb2axip
 	url = https://github.com/ZipCPU/wb2axip
+[submodule "extern/cxxopts"]
+	path = extern/cxxopts
+	url = https://github.com/jarro2783/cxxopts
+	branch = v2_2
