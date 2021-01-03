@@ -38,6 +38,7 @@ module mr_ldst(
 e_memsz size_pending;
 logic signed_pending;
 logic [`REGSEL_BITS-1:0] dst_reg_pending;
+logic [`XLEN_GRAN-1:0] shift_pending;
 
 initial cyc_o = 0;
 initial stb_o = 0;
@@ -75,10 +76,58 @@ end
 
 assign ex_ready_o = !cyc_o;
 
-wire [`XLEN/8-1:0] sel;
-assign sel = 4'b1111; // TODO: handle non-dwords
-wire [`XLEN-1:0] shifted_dat_i;
-assign shifted_dat_i = dat_i; // TODO: shifts and sign-ext
+// Send path shifting
+logic [`XLEN/8-1:0] sel;
+reg [`XLEN-1:0] shifted_dat_o;
+wire [`XLEN_GRAN-1:0] shift_bits_o = ex_addr_i[`XLEN_GRAN-1:0];
+always_comb case(ex_size_i)
+    MEMSZ_8B: begin
+        shifted_dat_o = ex_payload_i;
+        sel = 4'b1111;
+    end
+    MEMSZ_4B: begin
+        shifted_dat_o = ex_payload_i;
+        sel = 4'b1111;
+    end
+    MEMSZ_2B: begin
+        shifted_dat_o = { ex_payload_i[15:0], ex_payload_i[15:0]};
+        sel[3:2] = (shift_bits_o == 2'b1X) ? 2'b11 : 2'b00;
+        sel[1:0] = (shift_bits_o == 2'b0X) ? 2'b11 : 2'b00;
+    end
+    MEMSZ_1B: begin
+        shifted_dat_o = { ex_payload_i[7:0], ex_payload_i[7:0], ex_payload_i[7:0], ex_payload_i[7:0]};
+        sel[3] = (shift_bits_o == 2'b11);
+        sel[2] = (shift_bits_o == 2'b10);
+        sel[1] = (shift_bits_o == 2'b01);
+        sel[0] = (shift_bits_o == 2'b00);
+    end
+endcase
+
+
+// Return path shifting/value-decoding
+reg [`XLEN-1:0] shifted_dat_i;
+wire [16-1:0] shifted_2b_i;
+wire shifted_2b_sign_i;
+assign shifted_2b_i = ((shift_pending & 2'b10) != 0) ? dat_i[31:16] : dat_i[15:0];
+assign shifted_2b_sign_i = signed_pending ? shifted_2b_i[15] : 0;
+
+reg [8-1:0] shifted_1b_i;
+wire shifted_1b_sign_i;
+assign shifted_1b_sign_i = signed_pending ? shifted_2b_i[7] : 0;
+always_comb case(shift_pending)
+    0: shifted_1b_i = dat_i[7:0];
+    1: shifted_1b_i = dat_i[15:8];
+    2: shifted_1b_i = dat_i[23:16];
+    3: shifted_1b_i = dat_i[31:24];
+endcase
+
+always_comb case(size_pending) 
+    MEMSZ_8B: shifted_dat_i = dat_i; // Who cares?
+    MEMSZ_4B: shifted_dat_i = dat_i;
+    MEMSZ_2B: shifted_dat_i = {{16{shifted_2b_sign_i}}, shifted_2b_i};
+    MEMSZ_1B: shifted_dat_i = {{24{shifted_1b_sign_i}}, shifted_1b_i};
+endcase
+
 
 // Data sending logic
 always_ff @(posedge clk) begin
@@ -86,8 +135,11 @@ always_ff @(posedge clk) begin
         addr_o <= ex_addr_i[`XLEN-1:`XLEN_GRAN];
         we_o <= (ex_op_i == MEMOP_STORE);
         sel_o <= sel;
-        dat_o <= ex_payload_i;
+        dat_o <= shifted_dat_o;
         dst_reg_pending <= ex_dst_reg_i;
+        size_pending <= ex_size_i;
+        signed_pending <= ex_signed_i;
+        shift_pending <= shift_bits_o;
     end
 end
 
