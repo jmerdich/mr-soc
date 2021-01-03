@@ -108,7 +108,7 @@ la t0, _data_strings; \
 // This code will check a test to see if the results 
 // match the expected value.
 // It can also be used to tell if a set of tests is still running or has crashed
-#if 1
+#if 0
 // Spinning | =  "I am alive" 
 #define RVMODEL_IO_ASSERT_GPR_EQ(_SP, _R, _I)                                 \
     LOCAL_IO_PUSH(_SP)                                                  \
@@ -123,7 +123,7 @@ la t0, _data_strings; \
     LOCAL_IO_PUSH(_SP)                                                  \
     mv          s0, _R;                                                 \
     li          t5, _I;                                                 \
-    beq         s0, t5, 20002                                         \
+    beq         s0, t5, 20002;                                         \
     LOCAL_IO_WRITE_STR("Test Failed ");                              \
     LOCAL_IO_WRITE_STR(": ");                                        \
     LOCAL_IO_WRITE_STR(# _R);                                        \
@@ -133,7 +133,7 @@ la t0, _data_strings; \
     LOCAL_IO_WRITE_STR(" ) != ");                                    \
     mv      a0, t5;                                                     \
     jal FN_WriteNmbr;                                                   \
-    j 20003;                                                           \
+    j 20003f;                                                           \
 20002:                                                                  \
     LOCAL_IO_WRITE_STR("Test Passed ");                              \
 20003:                                                                  \
@@ -146,7 +146,13 @@ la t0, _data_strings; \
 // FN_WriteStr: Add code here to write a string to IO
 // FN_WriteNmbr: Add code here to write a number (32/64bits) to IO
 FN_WriteStr: \
-    ret; \
+    WriteStrLoop: \
+    lbu t0, (a0); \
+    beq t0, x0, WriteStrEnd; \
+    addi a0, a0, 1; \
+    sb t0, tohost, t1; \
+    j WriteStrLoop; \
+    WriteStrEnd: ret; \
 FN_WriteNmbr: \
     ret;
 

@@ -242,7 +242,7 @@ module mr_id (
         RV_LOAD: begin
             next_arg1 = rs1_data;
             next_uses_rs1 = 1;
-            next_arg2 = imm_s_lo;
+            next_arg2 = imm_i_lo;
             next_dst = rsd;
             next_uses_rsd = 1;
             next_alu_op = ALU_ADD; // Use ALU for addr calc

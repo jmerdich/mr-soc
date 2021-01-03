@@ -20,6 +20,14 @@ COMPILE_CMD=\
 		-I$(ROOTDIR)/riscv-test-suite/env/ \
 		-I$(TARGETDIR)/$(RISCV_TARGET)/ \
 		-T$(TARGETDIR)/$(RISCV_TARGET)/env/linkmono.ld $$< \
+		-c -o $$@.int.o; \
+    $$(RISCV_OBJDUMP) $$@.int.o -D > $$@.objdump.int; \
+    $$(RISCV_OBJDUMP) $$@.int.o --source > $$@.debug.int; \
+    $$(RISCV_READELF) -a $$@.int.o > $$@.readelf.int; \
+	$$(RISCV_GCC) $(1) $$(RISCV_GCC_OPTS) \
+		-I$(ROOTDIR)/riscv-test-suite/env/ \
+		-I$(TARGETDIR)/$(RISCV_TARGET)/ \
+		-T$(TARGETDIR)/$(RISCV_TARGET)/env/linkmono.ld $$< \
 		-o $$@; \
 	$$(RISCV_OBJCOPY) -O binary $$@ $$@.bin
 
