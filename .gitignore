@@ -1,3 +1,4 @@
 obj_dir/
 tb/formal/*/
 scratch/
+.vscode/
