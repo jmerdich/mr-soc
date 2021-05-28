@@ -97,7 +97,7 @@ module mr_id (
             reg_writes_pending <= 0;
 
         end
-        if (next_alu_valid) begin
+        if (next_alu_valid & alu_ready) begin
             alu_arg1 <= next_arg1;
             alu_arg2 <= next_arg2;
             alu_aluop <= next_alu_op;

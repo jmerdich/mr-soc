@@ -64,8 +64,10 @@ module mr_ifetch(
             inst_valid <= !addr_changed;
             inst_pc <= pc;
             inst <= dat_i;
-        end else begin
+        end else if (id_ready) begin
             inst_valid <= 0;
+        end else begin
+            inst_valid <= inst_valid;
         end
     end
 
