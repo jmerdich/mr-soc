@@ -46,6 +46,7 @@ always_ff @(posedge clk) begin
     if (reset | err_i) begin
         // Reset or bus error
         // TODO: bus fault trap logic. For now, bus error == nasal demons.
+        assert(!err_i);
         cyc_o <= 0;
         stb_o <= 0;
     end else if (stb_o) begin

@@ -8,7 +8,7 @@ export PATH:=/opt/riscv32/bin:${PATH}
 VERILATOR_ARGS = --top-module ${TOP_MODULE} ${VERILATOR_WARNS} $(addprefix -I,${V_INCLUDE_DIRS})
 VERILATOR_WARNS = -Wall -Wno-unused
 VERILATOR_LINT_ARGS = --lint-only
-VERILATOR_VER_ARGS = --cc --build --exe -Wno-undriven --trace-fst -CFLAGS "-ggdb $(addprefix -I../,${CXX_INCLUDE_DIRS})"
+VERILATOR_VER_ARGS = --cc --build --exe --assert -Wno-undriven --trace-fst -CFLAGS "-ggdb $(addprefix -I../,${CXX_INCLUDE_DIRS})"
 
 OUTFILE = obj_dir/V${TOP_MODULE}
 
