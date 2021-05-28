@@ -1,7 +1,9 @@
 `include "rtl/config.svi"
 
 module mr_core (
-    input clk /* verilator clocker */, rst /* verilator public */
+    input clk /* verilator clocker */, rst /* verilator public */,
+    
+    output bus_err
 );        
     // ******************************************************
     // *** Memory Interconnect
@@ -98,7 +100,7 @@ module mr_core (
     assign wbm0_dat_i = 0;
     assign wbm0_we_i = 0;
     assign wbm0_sel_i = 4'b1111;
-    mr_ifetch ifetch(clk, rst,
+    mr_ifetch ifetch(.clk, .rst,
 
         // memory bus
         .adr_o(wbm0_adr_i[`XLEN-1:`XLEN_GRAN]), .dat_i(wbm0_dat_o), .stb_o(wbm0_stb_i), .ack_i(wbm0_ack_o), .err_i(wbm0_err_o),
@@ -110,7 +112,7 @@ module mr_core (
         // From WB
         .wb_pc, .wb_pc_valid
     );
-    mr_id id(clk, rst,
+    mr_id id(.clk, .rst,
 
         // Backwards from IF
         .inst(if_id_inst), .inst_pc(if_id_pc), .inst_ready(id_ready), .inst_valid(if_valid),
@@ -128,7 +130,7 @@ module mr_core (
     );
 
 
-    mr_alu alu(clk, rst,
+    mr_alu alu(.clk, .rst,
 
         // Backwards from ID
         .id_valid(id_valid), .id_ready(alu_ready), .id_arg1(id_alu_arg1), .id_arg2(id_alu_arg2), .id_dest_reg(id_alu_dst),
@@ -146,7 +148,7 @@ module mr_core (
         .wb_pc_valid, .wb_pc, .jmp_done
     );
 
-    mr_ldst ldst(clk, rst,
+    mr_ldst ldst(.clk, .rst,
         // Backwards from ALU
         .ex_valid_i(alu_ls_valid), .ex_ready_o(ls_ready), .ex_addr_i(alu_ls_dest), .ex_dst_reg_i(alu_ls_dest_reg),
         .ex_op_i(alu_ls_memop), .ex_size_i(alu_ls_size), .ex_signed_i(alu_ls_signed), .ex_payload_i(alu_ls_payload),
@@ -191,4 +193,6 @@ module mr_core (
     assign wbm0_dat_o = wbs_dat_i;
     assign wbm1_dat_o = wbs_dat_i;
     
+    // Signal error
+    assign bus_err = wbs_err_i;
 endmodule

@@ -20,9 +20,9 @@ module mr_id (
 
     output e_memops alu_memop,
     output e_memsz alu_size,
-    output alu_signed, // ignored on store
-    output [`XLEN-1:0] alu_payload,
-    output [`XLEN-1:0] alu_payload2,
+    output reg alu_signed, // ignored on store
+    output reg [`XLEN-1:0] alu_payload,
+    output reg [`XLEN-1:0] alu_payload2,
 
     // From WB
     input jmp_done,
@@ -30,6 +30,34 @@ module mr_id (
     input [`REGSEL_BITS-1:0] wb_reg,
     input [`XLEN-1:0] wb_val
 );
+
+    logic [1:0] rs1_writes_pending;
+    logic [1:0] rs2_writes_pending;
+    logic rs1_data_hazard;
+    logic rs2_data_hazard;
+    logic [`XLEN-1:0] next_arg1;
+    logic [`XLEN-1:0] next_arg2;
+    logic [`XLEN-1:0] next_payload;
+    logic [`XLEN-1:0] next_payload2;
+    e_aluops next_alu_op;
+    e_memsz next_size;
+    logic   next_signed;
+    e_memops next_mem_op;
+    e_brops next_br_op;
+    logic [`REGSEL_BITS-1:0] next_dst;
+    logic next_uses_rs1;
+    logic next_uses_rs2;
+    logic next_uses_rsd;
+    logic op_valid;
+    logic data_hazard;
+
+    logic [2:0] func3 = inst[14:12];
+    logic [6:0] func7 = inst[31:25];
+    logic inv = func7[5]; // denotes 'sub' or arith-shift
+    logic ext = inst[31];
+    logic [4:0] rs2 = inst[24:20];
+    logic [4:0] rs1 = inst[19:15];
+    logic [4:0] rsd = inst[11:7];
 
     assign inst_ready = alu_ready & !rst & (!inst_valid | !data_hazard);
 
@@ -43,16 +71,11 @@ module mr_id (
     assign rs2_data = (rs2 != 0) ? regfile[rs2] : 0;
     // hazard detection
 
-    logic [1:0] rs1_writes_pending;
     assign rs1_writes_pending = reg_writes_pending[rs1];
-    logic [1:0] rs2_writes_pending;
     assign rs2_writes_pending = reg_writes_pending[rs2];
-    logic rs1_data_hazard;
     assign rs1_data_hazard = (next_uses_rs1 & (rs1 != 0) & (rs1_writes_pending != 0));
-    logic rs2_data_hazard;
     assign rs2_data_hazard = (next_uses_rs2 & (rs2 != 0) & (rs2_writes_pending != 0));
 
-    logic data_hazard;
     assign data_hazard = rs1_data_hazard || rs2_data_hazard || has_unresolved_jmp;
 
     logic is_comp;
@@ -60,18 +83,18 @@ module mr_id (
     logic len_valid;
     assign len_valid = (inst[4:2] != 3'b111) && (!is_comp || (`IALIGN == 16));
 
-    e_rvop op = inst[6:2];
-    logic [2:0] func3 = inst[14:12];
-    e_rvf3_alu func3_alu = inst[14:12];
-    e_rvf3_mem func3_mem = inst[14:12];
-    e_rvf3_br func3_br = inst[14:12];
-    logic [6:0] func7 = inst[31:25];
-    logic inv = func7[5]; // denotes 'sub' or arith-shift
-    logic ext = inst[31];
-    logic [4:0] rs2 = inst[24:20];
-    logic [4:0] rs1 = inst[19:15];
-    logic [4:0] rsd = inst[11:7];
-
+    e_rvop op;
+    e_rvf3_alu func3_alu;
+    e_rvf3_mem func3_mem;
+    e_rvf3_br func3_br;
+    
+    always_comb begin
+        op = e_rvop'(inst[6:2]);
+        func3_alu = e_rvf3_alu'(inst[14:12]);
+        func3_mem = e_rvf3_mem'(inst[14:12]);
+        func3_br  = e_rvf3_br'(inst[14:12]);
+    end
+   
     logic [32-1:0] imm_i_lo;
     assign imm_i_lo = { {21{ext}}, inst[30:25], inst[24:21], inst[20]};
     logic [32-1:0] imm_s_lo;
@@ -134,20 +157,7 @@ module mr_id (
         end
     end
 
-    logic [`XLEN-1:0] next_arg1;
-    logic [`XLEN-1:0] next_arg2;
-    logic [`XLEN-1:0] next_payload;
-    logic [`XLEN-1:0] next_payload2;
-    e_aluops next_alu_op;
-    e_memsz next_size;
-    logic                    next_signed;
-    e_memops next_mem_op;
-    e_brops next_br_op;
-    logic [`REGSEL_BITS-1:0] next_dst;
-    logic next_uses_rs1;
-    logic next_uses_rs2;
-    logic next_uses_rsd;
-    logic op_valid;
+
     always_comb begin 
         // Sane defaults with no side effects
         op_valid = 0;
@@ -155,6 +165,7 @@ module mr_id (
         next_mem_op = MEMOP_NONE;
         next_alu_op = ALU_ADD;
         next_br_op = BROP_NEVER;
+        next_size = MEMSZ_1B;
         next_arg1 = 0;
         next_arg2 = 0;
         next_payload = 0;
@@ -162,6 +173,7 @@ module mr_id (
         next_uses_rs1 = 0;
         next_uses_rs2 = 0;
         next_uses_rsd = 0;
+        next_signed = 0;
 
         case(op)
         RV_OP_IMM: begin
@@ -233,8 +245,7 @@ module mr_id (
                 RVF3_BYTE: next_size = MEMSZ_1B;
                 RVF3_HALF: next_size = MEMSZ_2B;
                 RVF3_WORD: next_size = MEMSZ_4B;
-                default: begin
-                    next_size = 2'bxx;
+                default: begin 
                     assert(op_valid == 0);
                 end
             endcase
@@ -274,7 +285,9 @@ module mr_id (
                     next_signed = 0;
                     op_valid = 1;
                 end
-                default: op_valid = 0;
+                default: begin
+                    op_valid = 0;
+                end
             endcase
         end
         RV_JAL: begin
@@ -320,8 +333,10 @@ module mr_id (
         default: begin
             // What is this?
             op_valid = 0;
+`ifndef SYNTHESIS
             if (inst_valid)
                 $display("Illegal OP! Time=%0t, Inst: %0h, PC: %0h", $time, inst, inst_pc);
+`endif
         end
     endcase
     end

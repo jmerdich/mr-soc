@@ -27,8 +27,8 @@ module mr_alu (
 
     output e_memops ls_memop,
     output e_memsz ls_size,
-    output ls_signed,
-    output [`XLEN-1:0] ls_payload,
+    output reg ls_signed,
+    output reg [`XLEN-1:0] ls_payload,
 
     // Branching
     output reg wb_pc_valid,

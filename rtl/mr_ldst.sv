@@ -33,6 +33,7 @@ module mr_ldst(
     input stall_i,
     input [`XLEN-1:0] dat_i
 );
+logic reset;
 
 // Metadata on active transaction
 e_memsz size_pending;
@@ -164,7 +165,6 @@ end
 
 
 // Formal wants a initial reset. 
-logic reset;
 initial reset = 1;
 always @(posedge clk) reset <= reset & rst;
 

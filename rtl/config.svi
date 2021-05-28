@@ -13,11 +13,11 @@
 `endif
 
 `ifndef RESET_VEC
-`define RESET_VEC {`XLEN{1'0}}
+`define RESET_VEC {`XLEN{1'b0}}
 `endif
 
 `ifndef MEMSIZE
-`define MEMSIZE 32*1024*1024
+`define MEMSIZE 512*1024
 `endif
 
 `define IMAXLEN 32

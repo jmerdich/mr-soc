@@ -15,7 +15,7 @@ module simple_mem(
     output reg [`XLEN-1:0] dat_o
 );
 
-    reg [`XLEN-1:0] mem [`MEMSIZE/`XLEN_BYTES-1:0]  /* verilator public */;
+    (* dont_touch = "true" *) reg [`XLEN-1:0] mem [`MEMSIZE/`XLEN_BYTES-1:0]  /* verilator public */;
     assign stall_o = 0;
 
     wire [$clog2(`MEMSIZE/`XLEN_BYTES)-1:0] addr;
