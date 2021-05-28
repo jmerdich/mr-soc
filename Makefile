@@ -1,8 +1,9 @@
 
 # TOOLS:
 VERILATOR = verilator
+RISCV_TOOLS_DIR ?= /opt/riscv32/bin
 
-export PATH:=/opt/riscv32/bin:${PATH}
+export PATH:=${RISCV_TOOLS_DIR}:${PATH}
 
 # ENV/CONFIG
 VERILATOR_ARGS = --top-module ${TOP_MODULE} ${VERILATOR_WARNS} $(addprefix -I,${V_INCLUDE_DIRS})
