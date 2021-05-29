@@ -161,6 +161,7 @@ module mr_core (
         .we_o(wbm1_we_i), .sel_o(wbm1_sel_i), .err_i(wbm1_err_o), .stall_i(wbm1_stall_o), .cyc_o(wbm1_cyc_i)
     );
 
+`ifdef VERILATOR
     simple_mem ram(.clk_i(clk), .rst_i(rst),
                    .addr_i(wbs_adr_o[`XLEN-1:`XLEN_GRAN]),
                    .we_i(wbs_we_o),
@@ -173,6 +174,20 @@ module mr_core (
                    .dat_o(wbs_dat_i),
                    .stall_o(wbs_stall_i)
                    );
+`else
+    simple_bram ram(.clk_i(clk), .rst_i(rst),
+                   .addr_i(wbs_adr_o[`XLEN-1:`XLEN_GRAN]),
+                   .we_i(wbs_we_o),
+                   .sel_i(wbs_sel_o),
+                   .dat_i(wbs_dat_o),
+                   .stb_i(wbs_stb_o),
+                   .cyc_i(wbs_cyc_o),
+                   .ack_o(wbs_ack_i),
+                   .err_o(wbs_err_i),
+                   .dat_o(wbs_dat_i),
+                   .stall_o(wbs_stall_i)
+                   );
+`endif
 
     wbarbiter wb_arb(
         .i_clk(clk), .i_reset(rst),
