@@ -46,9 +46,8 @@ module mr_core (
     wire               wbs_stall_i;     // RTY_I retry input
 
     // Our addresses are aligned
-    assign wbs_adr_o[$clog2(`XLEN)-1:0] = 0;
-    assign wbm0_adr_i[$clog2(`XLEN)-1:0] = 0;
-    assign wbm1_adr_i[$clog2(`XLEN)-1:0] = 0;
+    assign wbm0_adr_i[`XLEN_GRAN-1:0] = 0;
+    assign wbm1_adr_i[`XLEN_GRAN-1:0] = 0;
 
     // ******************************************************
     // *** Pipelined regs
