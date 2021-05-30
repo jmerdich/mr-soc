@@ -69,10 +69,10 @@ la t0, _data_strings; \
 //TODO: Macro to output a string to IO
 #define LOCAL_IO_WRITE_STR(_STR) RVMODEL_IO_WRITE_STR(x31, _STR)
 #define RVMODEL_IO_WRITE_STR(_SP, _STR)                                 \
-    .section .data.string;                                              \
+    .pushsection .data.string;                                          \
 20001:                                                                  \
     .string _STR;                                                       \
-    .section .text.init;                                                \
+    .popsection;                                                        \
     la a0, 20001b;                                                      \
     jal FN_WriteStr;
 
@@ -123,7 +123,7 @@ la t0, _data_strings; \
     LOCAL_IO_PUSH(_SP)                                                  \
     mv          s0, _R;                                                 \
     li          t5, _I;                                                 \
-    beq         s0, t5, 20002;                                         \
+    beq         s0, t5, 20002f;                                         \
     LOCAL_IO_WRITE_STR("Test Failed ");                              \
     LOCAL_IO_WRITE_STR(": ");                                        \
     LOCAL_IO_WRITE_STR(# _R);                                        \
@@ -135,7 +135,8 @@ la t0, _data_strings; \
     jal FN_WriteNmbr;                                                   \
     j 20003f;                                                           \
 20002:                                                                  \
-    LOCAL_IO_WRITE_STR("Test Passed ");                              \
+    LOCAL_IO_WRITE_STR("Test Passed: ");                              \
+    LOCAL_IO_WRITE_STR(# _R);                                         \
 20003:                                                                  \
     LOCAL_IO_WRITE_STR("\n");                                        \
     LOCAL_IO_POP(_SP)
