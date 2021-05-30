@@ -64,6 +64,7 @@ module mr_id (
     logic [31:1][`XLEN-1:0] regfile;
     logic [31:1][1:0] reg_writes_pending;
     logic has_unresolved_jmp;
+    logic [4:0] num_pending_insts;
 
     logic [`XLEN-1:0] rs1_data;
     assign rs1_data = (rs1 != 0) ? regfile[rs1] : 0;
@@ -112,48 +113,53 @@ module mr_id (
         has_unresolved_jmp = 0;
     end
 
+    assign alu_arg1 = next_arg1;
+    assign alu_arg2 = next_arg2;
+    assign alu_aluop = next_alu_op;
+    assign alu_br_op = next_br_op;
+    assign alu_memop = next_mem_op;
+    assign alu_dst = next_dst;
+    assign alu_size = next_size;
+    assign alu_signed = next_signed;
+    assign alu_payload = next_payload;
+    assign alu_payload2 = next_payload2;
+    assign alu_valid = next_alu_valid;
+
     logic next_alu_valid;
     assign next_alu_valid = len_valid & op_valid & !rst & inst_valid & !data_hazard;
     always_ff @(posedge clk) begin
-        alu_valid <= next_alu_valid;
         if (rst) begin
             reg_writes_pending <= 0;
-
+            num_pending_insts <= 0;
         end
-        if (next_alu_valid & alu_ready) begin
-            alu_arg1 <= next_arg1;
-            alu_arg2 <= next_arg2;
-            alu_aluop <= next_alu_op;
-            alu_br_op <= next_br_op;
-            alu_memop <= next_mem_op;
-            alu_dst <= next_dst;
-            alu_size <= next_size;
-            alu_signed <= next_signed;
-            alu_payload <= next_payload;
-            alu_payload2 <= next_payload2;
-
-            if (alu_ready && next_uses_rsd && rsd != 0) begin
-                assert(reg_writes_pending[rsd] != 2'b11);
-                reg_writes_pending[rsd] <= reg_writes_pending[rsd] + 1;
+        else begin
+            if (next_alu_valid & alu_ready) begin
+                if (alu_ready && next_uses_rsd && rsd != 0) begin
+                    assert(reg_writes_pending[rsd] != 2'b11);
+                    reg_writes_pending[rsd] <= reg_writes_pending[rsd] + 1;
+                end
+                if (alu_ready && next_br_op != BROP_NEVER) begin
+                    assert(has_unresolved_jmp == 0);
+                    has_unresolved_jmp <= 1;
+                end
             end
-            if (alu_ready && next_br_op != BROP_NEVER) begin
-                assert(has_unresolved_jmp == 0);
-                has_unresolved_jmp <= 1;
+            if (wb_valid && (wb_reg != 0)) begin
+                assert(reg_writes_pending[wb_reg] != 0);
+                regfile[wb_reg] <= wb_val;
+                reg_writes_pending[wb_reg] <= reg_writes_pending[wb_reg] - 1;
             end
-        end
-        if (wb_valid && (wb_reg != 0)) begin
-            assert(reg_writes_pending[wb_reg] != 0);
-            regfile[wb_reg] <= wb_val;
-            reg_writes_pending[wb_reg] <= reg_writes_pending[wb_reg] - 1;
-        end
-        if (jmp_done) begin
-            assert(has_unresolved_jmp == 1);
-            has_unresolved_jmp <= 0;
-        end
+            if (jmp_done) begin
+                assert(has_unresolved_jmp == 1);
+                has_unresolved_jmp <= 0;
+            end
 
-        // simultaneous inc and dec hazard counter to same register
-        if (next_alu_valid & alu_ready & wb_valid & next_uses_rsd & rsd != 0 & wb_reg != 0 & wb_reg == rsd) begin
-            reg_writes_pending[wb_reg] <= reg_writes_pending[wb_reg];
+            assert(num_pending_insts < 5);
+            num_pending_insts <= num_pending_insts + (5'(next_alu_valid) & 5'(alu_ready)) - 5'(wb_valid);
+
+            // simultaneous inc and dec hazard counter to same register
+            if (next_alu_valid & alu_ready & wb_valid & next_uses_rsd & rsd != 0 & wb_reg != 0 & wb_reg == rsd) begin
+                reg_writes_pending[wb_reg] <= reg_writes_pending[wb_reg];
+            end
         end
     end
 
