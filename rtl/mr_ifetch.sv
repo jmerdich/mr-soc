@@ -41,6 +41,7 @@ module mr_ifetch(
 
     logic addr_changed;
     always_ff @(posedge clk) begin
+        addr_changed <= addr_changed & !stb_o;
         if (rst) begin
             pc <= `RESET_VEC;
             addr_changed <= 0;
@@ -103,7 +104,6 @@ module mr_ifetch(
                 cyc_o <= 1;
                 stb_o <= 1;
                 adr_o <= wb_pc_valid ? wb_pc[`XLEN-1:`XLEN_GRAN] : pc[`XLEN-1:`XLEN_GRAN];
-                addr_changed <= 0;
             end
         end
     end
