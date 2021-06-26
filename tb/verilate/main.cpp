@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
     assert((entrypoint & 0x3) == 0); // alignment ok?
     assert((entrypoint == 0) || (entrypoint > 16)); // entrypoint must not overlap our jump stub
 
-    assert(entrypoint == 0); // not implemented :P
+    //assert(entrypoint == 0); // not implemented :P
     if (entrypoint != 0) {
         // Load then indirect jump
         top->mr_core->ram->mem[0] = 0x00802083; // TODO: 64-bit load if RV64

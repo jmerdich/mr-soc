@@ -336,6 +336,14 @@ module mr_id (
                 default: op_valid = 0;
             endcase
         end
+        RV_SYSTEM: begin
+            op_valid = 1;
+            // hack: all CSRs and breaks are nops!
+`ifndef SYNTHESIS
+            if (inst_valid)
+                $display("Unrecognized SYSTEM inst (NOP'd)! Time=%0t, Inst: %0h, PC: %0h", $time, inst, inst_pc);
+`endif
+        end
         default: begin
             // What is this?
             op_valid = 0;
