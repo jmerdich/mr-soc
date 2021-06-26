@@ -43,7 +43,7 @@ TIME_LIMIT=-1
 
 RUN_ARGS="--file $PROGFILE.bin --time-limit=$TIME_LIMIT -e 0x$START_ADDR --trace-file=$PROGFILENOEXT.fst --putc-addr 0x$PUTC_ADDR --halt-addr 0x$HALT_ADDR"
 
-echo ${SIM} ${RUN_ARGS}
 echo Running!
+echo ${SIM} ${RUN_ARGS}
 echo ==============================================================
 ${SIM} ${RUN_ARGS} |& tee $PROGFILENOEXT.log
