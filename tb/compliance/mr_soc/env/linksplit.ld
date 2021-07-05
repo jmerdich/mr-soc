@@ -1,5 +1,5 @@
 OUTPUT_ARCH("riscv")
-ENTRY(_start)
+ENTRY(rvtest_entry_point)
 
 MEMORY {               
   sram (rwx) : ORIGIN = <ram_address>, LENGTH = <ram_size>
