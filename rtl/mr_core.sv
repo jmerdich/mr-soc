@@ -96,6 +96,20 @@ module mr_core (
     e_memsz alu_ls_size;
     wire [`XLEN-1:0]        alu_ls_payload;
 
+    // CSR bus
+    wire csr_valid, csr_r, csr_w, csr_ready, csr_fence;
+    wire [`CSRLEN-1:0] csr_addr;
+    wire [`XLEN-1:0] csr_data;
+    wire [`XLEN-1:0] csr_wmask;
+    wire csr_ret_valid;
+    wire [`XLEN-1:0] csr_ret_data;
+    /* verilator lint_off UNOPTFLAT */
+    wire csr_legal;
+    /* verilator lint_on UNOPTFLAT */
+
+    // Misc system
+    wire [2:0] insts_ret;
+
     assign wbm0_dat_i = 0;
     assign wbm0_we_i = 0;
     assign wbm0_sel_i = 4'b1111;
@@ -113,6 +127,8 @@ module mr_core (
     );
     mr_id id(.clk, .rst,
 
+        .insts_ret,
+
         // Backwards from IF
         .inst(if_id_inst), .inst_pc(if_id_pc), .inst_ready(id_ready), .inst_valid(if_valid),
 
@@ -125,7 +141,24 @@ module mr_core (
         .alu_payload2(id_alu_payload2),
 
         // From WB
-        .wb_valid(wb_reg_valid), .wb_reg(wb_reg), .wb_val(wb_reg_data), .jmp_done
+        .wb_valid(wb_reg_valid), .wb_reg(wb_reg), .wb_val(wb_reg_data), .jmp_done,
+
+        // CSR bus
+        .csr_valid, .csr_ready, .csr_r, .csr_addr, .csr_w, .csr_data, .csr_wmask, .csr_legal, .csr_fence,
+        .csr_ret_valid, .csr_ret_data
+    );
+
+    mr_syscfg sys(.clk, .rst,
+    
+        .insts_ret,
+
+        .i_csr_valid(csr_valid), .i_csr_r(csr_r), .i_csr_addr(csr_addr), .i_csr_data(csr_data), .i_csr_wmask(csr_wmask),
+        .i_csr_ready(csr_ready), .i_csr_legal(csr_legal), .i_csr_fence(csr_fence), .i_csr_w(csr_w),
+
+        .o_csr_valid(csr_ret_valid), .o_csr_data(csr_ret_data)
+
+
+    
     );
 
 
