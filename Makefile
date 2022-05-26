@@ -13,7 +13,7 @@ VERILATOR_VER_ARGS = --cc --build --exe --assert -Wno-undriven --trace-fst --tra
 
 OUTFILE = obj_dir/V${TOP_MODULE}
 
-TOP_MODULE = mr_core
+TOP_MODULE = mr_soc
 
 # C++ SOURCES
 VERILATOR_CXX_SOURCES = tb/verilate/main.cpp
@@ -22,7 +22,7 @@ CXX_INCLUDE_DIRS = extern/cxxopts/include
 # SOURCES
 V_INCLUDE_DIRS = rtl extern/wb2axip/rtl
 V_HEADERS = rtl/config.svi
-V_SOURCES = rtl/mr_core.sv rtl/mr_alu.sv rtl/mr_id.sv rtl/mr_ifetch.sv rtl/mr_ldst.sv  rtl/simple_mem.sv
+V_SOURCES = rtl/mr_soc.sv rtl/mr_core.sv rtl/mr_alu.sv rtl/mr_id.sv rtl/mr_ifetch.sv rtl/mr_ldst.sv  rtl/simple_mem.sv
 
 .PHONY: check
 check: ${V_HEADERS} ${V_SOURCES}

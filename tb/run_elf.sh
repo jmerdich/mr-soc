@@ -9,12 +9,17 @@ fi
 REPO_ROOT="$(dirname ${BASH_SOURCE[0]})/.."
 PROGFILE="$1"
 
-SIM=${REPO_ROOT}/obj_dir/Vmr_core
+SIM=${REPO_ROOT}/obj_dir/Vmr_soc
 
-RISCV_TOOLS_DIR=/opt/riscv32/bin
+if [ -d /opt/riscv32/bin ] 
+then
+RISCV_TOOLS_DIR=/opt/riscv32/bin/
 DEFAULT_XLEN=32
+else
+DEFAULT_XLEN=64
+fi
 
-RISCV_PREFIX=${RISCV_TOOLS_DIR}/riscv${DEFAULT_XLEN}-unknown-elf-
+RISCV_PREFIX=${RISCV_TOOLS_DIR}riscv${DEFAULT_XLEN}-unknown-elf-
 RISCV_GCC=${RISCV_PREFIX}gcc
 RISCV_OBJDUMP=${RISCV_PREFIX}objdump
 RISCV_OBJCOPY=${RISCV_PREFIX}objcopy

@@ -17,14 +17,17 @@
 #include <cxxopts.hpp>
 
 // Verilated sources
-#include "Vmr_core.h"
-#include "Vmr_core_mr_core.h"
-#include "Vmr_core_simple_mem.h"
+#include "Vmr_soc.h"
+#include "Vmr_soc_mr_soc.h"
+#include "Vmr_soc_simple_mem.h"
+#include "Vmr_soc___024root.h"
 
-#define Vtop Vmr_core
+#define Vtop Vmr_soc
 
 Vtop *top = nullptr;                      // Instantiation of module
 VerilatedFstC* tfp = nullptr;
+uint32_t* sysmem = nullptr;
+size_t sysmem_size = 0;
 
 bool active = true;
 
@@ -75,8 +78,10 @@ int main(int argc, char** argv) {
     tfp->open(result["trace-file"].as<std::string>().c_str());
 
 
+    sysmem = top->rootp->mr_soc->ram->mem.data();
+    sysmem_size = sizeof(top->rootp->mr_soc->ram->mem.data());
     const uint64_t max_size = 32*1024*1024; // TODO: get this automatically
-    memset(top->mr_core->ram->mem, 0x00, sizeof(top->mr_core->ram->mem));
+    memset(sysmem, 0x00, sysmem_size);
     if (result["file"].count() != 0) {
         // Can I just point out how much easier this is in rust?
         // https://doc.rust-lang.org/std/io/trait.Read.html#examples-2
@@ -99,14 +104,14 @@ int main(int argc, char** argv) {
         }
         assert(num_xferd >= 0);
         assert(cur_loc == stat_buf.st_size);
-        memcpy(top->mr_core->ram->mem, buf, stat_buf.st_size);
+        memcpy(sysmem, buf, stat_buf.st_size);
         free(buf);
     } else {
         // Infinite 'x1 += 1' loop
         for (int i = 0; i < 10; i++) {
-            top->mr_core->ram->mem[i] = 0x00108093;
+            sysmem[i] = 0x00108093;
         }
-        top->mr_core->ram->mem[10] = 0x00000067;
+        sysmem[10] = 0x00000067;
     }
 
     uint64_t entrypoint = result["entrypoint"].as<uint64_t>();
@@ -116,10 +121,10 @@ int main(int argc, char** argv) {
     //assert(entrypoint == 0); // not implemented :P
     if (entrypoint != 0) {
         // Load then indirect jump
-        top->mr_core->ram->mem[0] = 0x00802083; // TODO: 64-bit load if RV64
-        top->mr_core->ram->mem[1] = 0x00008067;
-        top->mr_core->ram->mem[2] = entrypoint & 0xFFFFFFFF;
-        top->mr_core->ram->mem[3] = (entrypoint >> 32) & 0xFFFFFFFF;
+        sysmem[0] = 0x00802083; // TODO: 64-bit load if RV64
+        sysmem[1] = 0x00008067;
+        sysmem[2] = entrypoint & 0xFFFFFFFF;
+        sysmem[3] = (entrypoint >> 32) & 0xFFFFFFFF;
     }
 
     int64_t max_runtime = result["time-limit"].as<int64_t>();
@@ -134,7 +139,7 @@ int main(int argc, char** argv) {
 
     while (!Verilated::gotFinish() &&
            ((max_runtime < 0) || (main_time < max_runtime)) &&
-           ((halt_addr < 0) || (top->mr_core->ram->mem[halt_addr/4] == 0)) &&
+           ((halt_addr < 0) || (sysmem[halt_addr/4] == 0)) &&
            (active)) {
         if (main_time > 10) {
             top->rst = 0;   // Deassert reset
@@ -147,12 +152,12 @@ int main(int argc, char** argv) {
         }
         top->eval();            // Evaluate model
         tfp->dump(main_time);
-        if ((putc_addr >= 0) && (top->mr_core->ram->mem[putc_addr/4] != 0))
+        if ((putc_addr >= 0) && (sysmem[putc_addr/4] != 0))
         {
-            uint32_t data = top->mr_core->ram->mem[putc_addr/4];
+            uint32_t data = sysmem[putc_addr/4];
             assert(data == (data & 0xff));
             putc(data & 0xFF, stdout);
-            top->mr_core->ram->mem[putc_addr/4] = 0;
+            sysmem[putc_addr/4] = 0;
         }
         main_time++;            // Time passes...
     }
@@ -170,11 +175,11 @@ int main(int argc, char** argv) {
     if ((max_runtime >= 0) && (main_time >= max_runtime)) {
         std::cout << "Simulation timed out after " << main_time << " clocks." << std::endl;
     }
-    if ((halt_addr >= 0) && ((top->mr_core->ram->mem[halt_addr/4]) != 0)) {
+    if ((halt_addr >= 0) && ((sysmem[halt_addr/4]) != 0)) {
         std::cout << "Simulation reached halt trigger condition after " << main_time << " clocks." << std::endl;
         std::cout << std::hex;
         std::cout << "  Trigger loc: " << halt_addr << std::endl;
-        std::cout << "  Trigger val: " << (top->mr_core->ram->mem[halt_addr/4]) << std::endl;
+        std::cout << "  Trigger val: " << (sysmem[halt_addr/4]) << std::endl;
         std::cout << std::dec;
     }
 

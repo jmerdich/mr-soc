@@ -3,51 +3,35 @@
 module mr_core (
     input clk /* verilator clocker */, rst /* verilator public */,
     
-    output bus_err
-);        
     // ******************************************************
     // *** Memory Interconnect
     // ******************************************************
 
     // ifetch wishbone iface sigs
-    wire [`XLEN-1:0]   wbm0_adr_i;    // ADR_I() address input
-    wire [`XLEN-1:0]   wbm0_dat_i;    // DAT_I() data in
-    wire [`XLEN-1:0]   wbm0_dat_o;    // DAT_O() data out
-    wire               wbm0_we_i;     // WE_I write enable input
-    wire [`XLEN/8-1:0] wbm0_sel_i;    // SEL_I() select input
-    wire               wbm0_stb_i;    // STB_I strobe input
-    wire               wbm0_ack_o;    // ACK_O acknowledge output
-    wire               wbm0_err_o;    // ERR_O error output
-    wire               wbm0_cyc_i;    // CYC_I cycle input
-    wire               wbm0_stall_o;    // RTY_O retry output
+    output [`XLEN-1:0]   wbm0_adr_o,    // ADR() address
+    input  [`XLEN-1:0]   wbm0_dat_i,    // DAT_I() data in
+    output [`XLEN-1:0]   wbm0_dat_o,    // DAT_O() data out
+    output               wbm0_we_o,     // WE write enable
+    output [`XLEN/8-1:0] wbm0_sel_o,    // SEL() select
+    output               wbm0_stb_o,    // STB strobe
+    input                wbm0_ack_i,    // ACK acknowledge
+    input                wbm0_err_i,    // ERR error
+    output               wbm0_cyc_o,    // CYC cycle
+    input                wbm0_stall_i,  // RTY retry
 
     // LD-ST wishbone iface sigs
-    wire [`XLEN-1:0]   wbm1_adr_i;    // ADR_I() address input
-    wire [`XLEN-1:0]   wbm1_dat_i;    // DAT_I() data in
-    wire [`XLEN-1:0]   wbm1_dat_o;    // DAT_O() data out
-    wire               wbm1_we_i;     // WE_I write enable input
-    wire [`XLEN/8-1:0] wbm1_sel_i;    // SEL_I() select input
-    wire               wbm1_stb_i;    // STB_I strobe input
-    wire               wbm1_ack_o;    // ACK_O acknowledge output
-    wire               wbm1_err_o;    // ERR_O error output
-    wire               wbm1_cyc_i;    // CYC_I cycle input
-    wire               wbm1_stall_o;    // RTY_O retry output
+    output [`XLEN-1:0]   wbm1_adr_o,    // ADR() address
+    input  [`XLEN-1:0]   wbm1_dat_i,    // DAT_I() data in
+    output [`XLEN-1:0]   wbm1_dat_o,    // DAT_O() data out
+    output               wbm1_we_o,     // WE write enable
+    output [`XLEN/8-1:0] wbm1_sel_o,    // SEL() select
+    output               wbm1_stb_o,    // STB strobe
+    input                wbm1_ack_i,    // ACK acknowledge
+    input                wbm1_err_i,    // ERR error
+    output               wbm1_cyc_o,    // CYC cycle
+    input                wbm1_stall_i   // RTY retry
+);        
 
-    // Wishbone to memory
-    wire [`XLEN-1:0]   wbs_adr_o;     // ADR_O() address output
-    wire [`XLEN-1:0]   wbs_dat_i;     // DAT_I() data in
-    wire [`XLEN-1:0]   wbs_dat_o;     // DAT_O() data out
-    wire               wbs_we_o;      // WE_O write enable output
-    wire [`XLEN/8-1:0] wbs_sel_o;     // SEL_O() select output
-    wire               wbs_stb_o;     // STB_O strobe output
-    wire               wbs_ack_i;     // ACK_I acknowledge input
-    wire               wbs_err_i;     // ERR_I error input
-    wire               wbs_cyc_o;     // CYC_O cycle output
-    wire               wbs_stall_i;     // RTY_I retry input
-
-    // Our addresses are aligned
-    assign wbm0_adr_i[`XLEN_GRAN-1:0] = 0;
-    assign wbm1_adr_i[`XLEN_GRAN-1:0] = 0;
 
     // ******************************************************
     // *** Pipelined regs
@@ -110,14 +94,15 @@ module mr_core (
     // Misc system
     wire [2:0] insts_ret;
 
-    assign wbm0_dat_i = 0;
-    assign wbm0_we_i = 0;
-    assign wbm0_sel_i = 4'b1111;
+    assign wbm0_dat_o = 0;
+    assign wbm0_we_o = 0;
+    assign wbm0_sel_o = 4'b1111;
+    assign wbm0_adr_o[`XLEN_GRAN:0] = 0;
     mr_ifetch ifetch(.clk, .rst,
 
         // memory bus
-        .adr_o(wbm0_adr_i[`XLEN-1:`XLEN_GRAN]), .dat_i(wbm0_dat_o), .stb_o(wbm0_stb_i), .ack_i(wbm0_ack_o), .err_i(wbm0_err_o),
-        .stall_i(wbm0_stall_o), .cyc_o(wbm0_cyc_i),
+        .adr_o(wbm0_adr_o[`XLEN-1:`XLEN_GRAN]), .dat_i(wbm0_dat_i), .stb_o(wbm0_stb_o), .ack_i(wbm0_ack_i), .err_i(wbm0_err_i),
+        .stall_i(wbm0_stall_i), .cyc_o(wbm0_cyc_o),
 
         // Forwards to ID
         .inst(if_id_inst), .inst_pc(if_id_pc), .inst_valid(if_valid), .id_ready(id_ready),
@@ -180,6 +165,7 @@ module mr_core (
         .wb_pc_valid, .wb_pc, .jmp_done
     );
 
+    assign wbm1_adr_o[`XLEN_GRAN:0] = 0;
     mr_ldst ldst(.clk, .rst,
         // Backwards from ALU
         .ex_valid_i(alu_ls_valid), .ex_ready_o(ls_ready), .ex_addr_i(alu_ls_dest), .ex_dst_reg_i(alu_ls_dest_reg),
@@ -189,57 +175,8 @@ module mr_core (
         .wb_write(wb_reg_valid), .wb_dst_reg_o(wb_reg), .wb_payload_o(wb_reg_data),
 
         // Memory iface
-        .addr_o(wbm1_adr_i[`XLEN-1:`XLEN_GRAN]), .dat_i(wbm1_dat_o), .dat_o(wbm1_dat_i), .stb_o(wbm1_stb_i), .ack_i(wbm1_ack_o),
-        .we_o(wbm1_we_i), .sel_o(wbm1_sel_i), .err_i(wbm1_err_o), .stall_i(wbm1_stall_o), .cyc_o(wbm1_cyc_i)
+        .addr_o(wbm1_adr_o[`XLEN-1:`XLEN_GRAN]), .dat_i(wbm1_dat_i), .dat_o(wbm1_dat_o), .stb_o(wbm1_stb_o), .ack_i(wbm1_ack_i),
+        .we_o(wbm1_we_o), .sel_o(wbm1_sel_o), .err_i(wbm1_err_i), .stall_i(wbm1_stall_i), .cyc_o(wbm1_cyc_o)
     );
 
-`ifdef VERILATOR
-    simple_mem ram(.clk_i(clk), .rst_i(rst),
-                   .addr_i(wbs_adr_o[`XLEN-1:`XLEN_GRAN]),
-                   .we_i(wbs_we_o),
-                   .sel_i(wbs_sel_o),
-                   .dat_i(wbs_dat_o),
-                   .stb_i(wbs_stb_o),
-                   .cyc_i(wbs_cyc_o),
-                   .ack_o(wbs_ack_i),
-                   .err_o(wbs_err_i),
-                   .dat_o(wbs_dat_i),
-                   .stall_o(wbs_stall_i)
-                   );
-`else
-    simple_bram ram(.clk_i(clk), .rst_i(rst),
-                   .addr_i(wbs_adr_o[`XLEN-1:`XLEN_GRAN]),
-                   .we_i(wbs_we_o),
-                   .sel_i(wbs_sel_o),
-                   .dat_i(wbs_dat_o),
-                   .stb_i(wbs_stb_o),
-                   .cyc_i(wbs_cyc_o),
-                   .ack_o(wbs_ack_i),
-                   .err_o(wbs_err_i),
-                   .dat_o(wbs_dat_i),
-                   .stall_o(wbs_stall_i)
-                   );
-`endif
-
-    wbarbiter wb_arb(
-        .i_clk(clk), .i_reset(rst),
-        // ifetch
-        .i_a_adr(wbm0_adr_i), .i_a_dat(wbm0_dat_i), .i_a_we(wbm0_we_i), .i_a_sel(wbm0_sel_i),
-        .i_a_stb(wbm0_stb_i), .o_a_ack(wbm0_ack_o), .o_a_err(wbm0_err_o), .o_a_stall(wbm0_stall_o), .i_a_cyc(wbm0_cyc_i),
-
-        // load-store
-        .i_b_adr(wbm1_adr_i), .i_b_dat(wbm1_dat_i), .i_b_we(wbm1_we_i), .i_b_sel(wbm1_sel_i),
-        .i_b_stb(wbm1_stb_i), .o_b_ack(wbm1_ack_o), .o_b_err(wbm1_err_o), .o_b_stall(wbm1_stall_o), .i_b_cyc(wbm1_cyc_i),
-
-        // memory (slave)
-        .o_adr(wbs_adr_o), .o_dat(wbs_dat_o), .o_we(wbs_we_o), .o_sel(wbs_sel_o), .o_stb(wbs_stb_o),
-        .i_ack(wbs_ack_i), .i_err(wbs_err_i), .i_stall(wbs_stall_i), .o_cyc(wbs_cyc_o) 
-    );
-
-    // Return data path doesn't need a mux
-    assign wbm0_dat_o = wbs_dat_i;
-    assign wbm1_dat_o = wbs_dat_i;
-    
-    // Signal error
-    assign bus_err = wbs_err_i;
 endmodule
