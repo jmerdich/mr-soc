@@ -13,10 +13,6 @@
 `define IALIGN 32
 `endif
 
-`ifndef RESET_VEC
-`define RESET_VEC {`XLEN{1'b0}}
-`endif
-
 `ifndef MEMSIZE
 `define MEMSIZE 512*1024
 `endif

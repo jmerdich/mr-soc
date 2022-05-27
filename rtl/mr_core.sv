@@ -1,6 +1,10 @@
 `include "rtl/config.svi"
 
-module mr_core (
+module mr_core 
+#(
+    parameter RESET_VEC = 0
+)
+(
     input clk /* verilator clocker */, rst /* verilator public */,
     
     // ******************************************************
@@ -98,7 +102,7 @@ module mr_core (
     assign wbm0_we_o = 0;
     assign wbm0_sel_o = 4'b1111;
     assign wbm0_adr_o[`XLEN_GRAN:0] = 0;
-    mr_ifetch ifetch(.clk, .rst,
+    mr_ifetch #( .RESET_VEC ) ifetch(.clk, .rst,
 
         // memory bus
         .adr_o(wbm0_adr_o[`XLEN-1:`XLEN_GRAN]), .dat_i(wbm0_dat_i), .stb_o(wbm0_stb_o), .ack_i(wbm0_ack_i), .err_i(wbm0_err_i),

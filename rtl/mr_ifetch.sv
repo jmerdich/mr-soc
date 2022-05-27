@@ -5,7 +5,11 @@
 //  - start next req before ID ack's   
 //  - handle jump hazards
 
-module mr_ifetch(
+module mr_ifetch
+    #(
+    parameter RESET_VEC = 0
+    ) 
+    (
     input clk, rst,
 
     // Mem
@@ -33,7 +37,7 @@ module mr_ifetch(
 
     reg [`XLEN-1:0] pc;
     initial begin
-        pc = `RESET_VEC;
+        pc = RESET_VEC;
     end
 
     logic [`XLEN-1:0] pc_offset;
@@ -43,7 +47,7 @@ module mr_ifetch(
     always_ff @(posedge clk) begin
         addr_changed <= addr_changed & !stb_o;
         if (rst) begin
-            pc <= `RESET_VEC;
+            pc <= RESET_VEC;
             addr_changed <= 0;
         end else if (wb_pc_valid) begin
             pc <= wb_pc;
