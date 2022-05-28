@@ -12,7 +12,7 @@ module mr_core
     // ******************************************************
 
     // ifetch wishbone iface sigs
-    output [`XLEN-1:0]   wbm0_adr_o,    // ADR() address
+    output [`XLEN-`XLEN_GRAN-1:0]   wbm0_adr_o,    // ADR() address
     input  [`XLEN-1:0]   wbm0_dat_i,    // DAT_I() data in
     output [`XLEN-1:0]   wbm0_dat_o,    // DAT_O() data out
     output               wbm0_we_o,     // WE write enable
@@ -24,7 +24,7 @@ module mr_core
     input                wbm0_stall_i,  // RTY retry
 
     // LD-ST wishbone iface sigs
-    output [`XLEN-1:0]   wbm1_adr_o,    // ADR() address
+    output [`XLEN-`XLEN_GRAN-1:0]   wbm1_adr_o,    // ADR() address
     input  [`XLEN-1:0]   wbm1_dat_i,    // DAT_I() data in
     output [`XLEN-1:0]   wbm1_dat_o,    // DAT_O() data out
     output               wbm1_we_o,     // WE write enable
@@ -101,11 +101,10 @@ module mr_core
     assign wbm0_dat_o = 0;
     assign wbm0_we_o = 0;
     assign wbm0_sel_o = 4'b1111;
-    assign wbm0_adr_o[`XLEN_GRAN:0] = 0;
     mr_ifetch #( .RESET_VEC ) ifetch(.clk, .rst,
 
         // memory bus
-        .adr_o(wbm0_adr_o[`XLEN-1:`XLEN_GRAN]), .dat_i(wbm0_dat_i), .stb_o(wbm0_stb_o), .ack_i(wbm0_ack_i), .err_i(wbm0_err_i),
+        .adr_o(wbm0_adr_o[`XLEN-`XLEN_GRAN-1:0]), .dat_i(wbm0_dat_i), .stb_o(wbm0_stb_o), .ack_i(wbm0_ack_i), .err_i(wbm0_err_i),
         .stall_i(wbm0_stall_i), .cyc_o(wbm0_cyc_o),
 
         // Forwards to ID
@@ -169,7 +168,6 @@ module mr_core
         .wb_pc_valid, .wb_pc, .jmp_done
     );
 
-    assign wbm1_adr_o[`XLEN_GRAN:0] = 0;
     mr_ldst ldst(.clk, .rst,
         // Backwards from ALU
         .ex_valid_i(alu_ls_valid), .ex_ready_o(ls_ready), .ex_addr_i(alu_ls_dest), .ex_dst_reg_i(alu_ls_dest_reg),
@@ -179,7 +177,7 @@ module mr_core
         .wb_write(wb_reg_valid), .wb_dst_reg_o(wb_reg), .wb_payload_o(wb_reg_data),
 
         // Memory iface
-        .addr_o(wbm1_adr_o[`XLEN-1:`XLEN_GRAN]), .dat_i(wbm1_dat_i), .dat_o(wbm1_dat_o), .stb_o(wbm1_stb_o), .ack_i(wbm1_ack_i),
+        .addr_o(wbm1_adr_o[`XLEN-`XLEN_GRAN-1:0]), .dat_i(wbm1_dat_i), .dat_o(wbm1_dat_o), .stb_o(wbm1_stb_o), .ack_i(wbm1_ack_i),
         .we_o(wbm1_we_o), .sel_o(wbm1_sel_o), .err_i(wbm1_err_i), .stall_i(wbm1_stall_i), .cyc_o(wbm1_cyc_o)
     );
 

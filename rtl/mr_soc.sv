@@ -52,7 +52,7 @@ module mr_soc (
     mr_core core(
         .clk, .rst,
 
-        .wbm0_adr_o(wbm0_adr_i),
+        .wbm0_adr_o(wbm0_adr_i[`XLEN-1:`XLEN_GRAN]),
         .wbm0_dat_i(wbm0_dat_o),
         .wbm0_dat_o(wbm0_dat_i),
         .wbm0_we_o(wbm0_we_i),
@@ -63,7 +63,7 @@ module mr_soc (
         .wbm0_cyc_o(wbm0_cyc_i),
         .wbm0_stall_i(wbm0_stall_o),
 
-        .wbm1_adr_o(wbm1_adr_i),
+        .wbm1_adr_o(wbm1_adr_i[`XLEN-1:`XLEN_GRAN]),
         .wbm1_dat_i(wbm1_dat_o),
         .wbm1_dat_o(wbm1_dat_i),
         .wbm1_we_o(wbm1_we_i),
