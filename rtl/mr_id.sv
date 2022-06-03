@@ -26,10 +26,10 @@ module mr_id (
 
     // CSRs
     // Legality and needs-fence must be combinatorial
-    output csr_valid, csr_r, csr_w,
-    output [`CSRLEN-1:0] csr_addr,
-    output [`XLEN-1:0] csr_data,
-    output [`XLEN-1:0] csr_wmask,
+    output reg csr_valid, csr_r, csr_w,
+    output reg [`CSRLEN-1:0] csr_addr,
+    output reg [`XLEN-1:0] csr_data,
+    output reg [`XLEN-1:0] csr_wmask,
     input csr_ready, csr_legal, csr_fence, // TODO: fence logic
 
     // Each recieved+legal CSR gets one output in-order
@@ -69,7 +69,7 @@ module mr_id (
 
     logic [2:0] func3 = inst[14:12];
     logic [6:0] func7 = inst[31:25];
-    logic inv = func7[5]; // denotes 'sub' or arith-shift
+    bit inv = func7[5]; // denotes 'sub' or arith-shift
     logic ext = inst[31];
     logic [4:0] rs2 = inst[24:20];
     logic [4:0] rs1 = inst[19:15];
@@ -126,13 +126,11 @@ module mr_id (
     e_rvf3_br  func3_br;
     e_rvf3_sys func3_sys;
     
-    always_comb begin
-        op = e_rvop'(inst[6:2]);
-        func3_alu = e_rvf3_alu'(inst[14:12]);
-        func3_mem = e_rvf3_mem'(inst[14:12]);
-        func3_br  = e_rvf3_br'(inst[14:12]);
-        func3_sys = e_rvf3_sys'(inst[14:12]);
-    end
+    assign op = e_rvop'(inst[6:2]);
+    assign func3_alu = e_rvf3_alu'(inst[14:12]);
+    assign func3_mem = e_rvf3_mem'(inst[14:12]);
+    assign func3_br  = e_rvf3_br'(inst[14:12]);
+    assign func3_sys = e_rvf3_sys'(inst[14:12]);
    
     logic [32-1:0] imm_i_lo;
     assign imm_i_lo = { {21{ext}}, inst[30:25], inst[24:21], inst[20]};
@@ -147,7 +145,7 @@ module mr_id (
     logic [`CSRLEN-1:0] imm_csr;
     assign imm_csr = inst[31:20];
     logic [`XLEN-1:0] imm_csr_data;
-    assign imm_csr_data = {{(`XLEN-5){1'0}}, inst[19:15]};
+    assign imm_csr_data = {{(`XLEN-5){1'b0}}, inst[19:15]};
 
     initial begin
         regfile = 0;
@@ -178,7 +176,7 @@ module mr_id (
 
     logic next_inst_valid;
     assign next_inst_valid = len_valid & op_valid & !rst & inst_valid & !data_hazard;
-    always_ff @(posedge clk) begin
+    `ALWAYS_FF_ICARUS_159 @(posedge clk) begin
         if (rst) begin
             reg_writes_pending <= 0;
             num_pending_insts <= 0;
@@ -241,7 +239,7 @@ module mr_id (
     end
 
 
-    always_comb begin 
+    `ALWAYS_COMB_ICARUS_159 begin 
         // Sane defaults with no side effects
         op_valid = 0;
         next_dst = 0;

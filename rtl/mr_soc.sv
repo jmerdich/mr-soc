@@ -76,8 +76,8 @@ module mr_soc (
     );
 
 
-`ifdef VERILATOR
-    simple_mem ram(.clk_i(clk), .rst_i(rst),
+`ifdef VIVADO
+    simple_bram ram(.clk_i(clk), .rst_i(rst),
                    .addr_i(wbs_adr_o[`XLEN-1:`XLEN_GRAN]),
                    .we_i(wbs_we_o),
                    .sel_i(wbs_sel_o),
@@ -90,7 +90,7 @@ module mr_soc (
                    .stall_o(wbs_stall_i)
                    );
 `else
-    simple_bram ram(.clk_i(clk), .rst_i(rst),
+    simple_mem ram(.clk_i(clk), .rst_i(rst),
                    .addr_i(wbs_adr_o[`XLEN-1:`XLEN_GRAN]),
                    .we_i(wbs_we_o),
                    .sel_i(wbs_sel_o),

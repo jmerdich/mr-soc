@@ -5,6 +5,15 @@
 `define XLEN 32
 `endif
 
+
+`ifdef __ICARUS__
+`define ALWAYS_COMB_ICARUS_159 always @(*)
+`define ALWAYS_FF_ICARUS_159 always
+`else
+`define ALWAYS_COMB_ICARUS_159 always_comb
+`define ALWAYS_FF_ICARUS_159 always_ff
+`endif
+
 `define XLEN_BYTES (`XLEN/8)
 `define XLEN_GRAN ($clog2(`XLEN) - 3)
 `define CSRLEN 12

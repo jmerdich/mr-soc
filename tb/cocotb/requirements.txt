@@ -1,0 +1,3 @@
+cocotb
+cocotbext-wishbone
+riscv-assembler

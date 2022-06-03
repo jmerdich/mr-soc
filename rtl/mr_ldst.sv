@@ -43,7 +43,7 @@ logic [`XLEN_GRAN-1:0] shift_pending;
 
 initial cyc_o = 0;
 initial stb_o = 0;
-always_ff @(posedge clk) begin
+`ALWAYS_FF_ICARUS_159 @(posedge clk) begin
     if (reset | err_i) begin
         // Reset or bus error
         // TODO: bus fault trap logic. For now, bus error == nasal demons.
@@ -82,7 +82,7 @@ assign ex_ready_o = !cyc_o;
 logic [`XLEN/8-1:0] sel;
 reg [`XLEN-1:0] shifted_dat_o;
 wire [`XLEN_GRAN-1:0] shift_bits_o = ex_addr_i[`XLEN_GRAN-1:0];
-always_comb case(ex_size_i)
+`ALWAYS_COMB_ICARUS_159 case(ex_size_i)
     MEMSZ_8B: begin
         shifted_dat_o = ex_payload_i;
         sel = 4'b1111;
@@ -116,7 +116,7 @@ assign shifted_2b_sign_i = signed_pending ? shifted_2b_i[15] : 0;
 reg [8-1:0] shifted_1b_i;
 wire shifted_1b_sign_i;
 assign shifted_1b_sign_i = signed_pending ? shifted_2b_i[7] : 0;
-always_comb case(shift_pending)
+`ALWAYS_COMB_ICARUS_159 case(shift_pending)
     0: shifted_1b_i = dat_i[7:0];
     1: shifted_1b_i = dat_i[15:8];
     2: shifted_1b_i = dat_i[23:16];

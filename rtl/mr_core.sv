@@ -101,7 +101,10 @@ module mr_core
     assign wbm0_dat_o = 0;
     assign wbm0_we_o = 0;
     assign wbm0_sel_o = 4'b1111;
-    mr_ifetch #( .RESET_VEC ) ifetch(.clk, .rst,
+    mr_ifetch 
+      #( .RESET_VEC(RESET_VEC) )
+      ifetch 
+      (.clk, .rst,
 
         // memory bus
         .adr_o(wbm0_adr_o[`XLEN-`XLEN_GRAN-1:0]), .dat_i(wbm0_dat_i), .stb_o(wbm0_stb_o), .ack_i(wbm0_ack_i), .err_i(wbm0_err_i),
