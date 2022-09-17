@@ -80,8 +80,8 @@ module mr_id (
                             ((dispatch_kind == DISPATCH_NORMAL) & alu_ready);
     assign inst_ready = next_stg_ready & !rst & (!inst_valid | !data_hazard);
 
-    logic [31:1][`XLEN-1:0] regfile;
-    logic [31:1][1:0] reg_writes_pending;
+    logic [`XLEN-1:0] regfile[31:1];
+    logic [1:0] reg_writes_pending[31:1];
     logic has_unresolved_jmp;
     logic [4:0] num_pending_insts;
 
@@ -127,11 +127,11 @@ module mr_id (
     e_rvf3_sys func3_sys;
     
     always_comb begin
-        op = e_rvop'(inst[6:2]);
-        func3_alu = e_rvf3_alu'(inst[14:12]);
-        func3_mem = e_rvf3_mem'(inst[14:12]);
-        func3_br  = e_rvf3_br'(inst[14:12]);
-        func3_sys = e_rvf3_sys'(inst[14:12]);
+        op = `TYPECAST(e_rvop, (inst[6:2]));
+        func3_alu = `TYPECAST(e_rvf3_alu, (inst[14:12]));
+        func3_mem = `TYPECAST(e_rvf3_mem, (inst[14:12]));
+        func3_br  = `TYPECAST(e_rvf3_br, (inst[14:12]));
+        func3_sys = `TYPECAST(e_rvf3_sys, (inst[14:12]));
     end
    
     logic [32-1:0] imm_i_lo;
@@ -147,11 +147,14 @@ module mr_id (
     logic [`CSRLEN-1:0] imm_csr;
     assign imm_csr = inst[31:20];
     logic [`XLEN-1:0] imm_csr_data;
-    assign imm_csr_data = {{(`XLEN-5){1'0}}, inst[19:15]};
+    logic [`XLEN-6:0] imm_csr_hi = 0;
+    assign imm_csr_data = {imm_csr_hi, inst[19:15]};
 
     initial begin
-        regfile = 0;
-        reg_writes_pending = 0;
+        for (integer i=1; i < 32; i++) begin
+            regfile[i] = 0;
+            reg_writes_pending[i] = 0;
+        end
         has_unresolved_jmp = 0;
     end
 
@@ -180,7 +183,10 @@ module mr_id (
     assign next_inst_valid = len_valid & op_valid & !rst & inst_valid & !data_hazard;
     always_ff @(posedge clk) begin
         if (rst) begin
-            reg_writes_pending <= 0;
+            for (integer i=1; i < 32; i++) begin
+                regfile[i] = 0;
+                reg_writes_pending[i] = 0;
+            end
             num_pending_insts <= 0;
             csr_active <= 0;
             has_unresolved_jmp <= 0;
@@ -260,6 +266,9 @@ module mr_id (
         dispatch_kind = DISPATCH_NORMAL;
         csr_r = 0;
         csr_w = 0;
+        csr_addr = 0;
+        csr_data = 0;
+        csr_wmask = 0;
 
         case(op)
         RV_OP_IMM: begin

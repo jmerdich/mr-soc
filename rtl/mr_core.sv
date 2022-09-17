@@ -1,11 +1,22 @@
 `include "rtl/config.svi"
 
+interface foo_i(input clk);
+logic [3:0] fielda;
+
+modport MP1(input fielda);
+
+endinterface
+
 module mr_core 
 #(
     parameter RESET_VEC = 0
 )
 (
     input clk /* verilator clocker */, rst /* verilator public */,
+
+`ifdef RISCV_FORMAL
+    `RVFI_OUTPUTS,
+`endif
     
     // ******************************************************
     // *** Memory Interconnect
@@ -46,6 +57,7 @@ module mr_core
     wire [`XLEN-1:0] if_id_pc;
     wire if_valid;
     wire id_ready;
+    wire id_alu_jump_prediction;
 
     // WB -> IF
     wire [`XLEN-1:0] wb_pc;
@@ -66,6 +78,7 @@ module mr_core
     wire [`XLEN-1:0]        id_alu_arg2;
     wire [`REGSEL_BITS-1:0] id_alu_dst;
     e_aluops id_alu_aluop;
+    wire id_alu_jump_prediction;
 
     // ID -> ALU (-> LDST)
     wire id_alu_signed;
@@ -83,6 +96,19 @@ module mr_core
     e_memops alu_ls_memop;
     e_memsz alu_ls_size;
     wire [`XLEN-1:0]        alu_ls_payload;
+    wire alu_ls_unpredicted_jump;
+
+    // LDST -> WB
+    wire ls_wb_valid;
+    wire [`XLEN-1:0]        ls_wb_dest;
+    wire [`REGSEL_BITS-1:0] ls_wb_dest_reg;
+    wire [`XLEN-1:0]        ls_wb_newpc;
+    wire ls_wb_unpredicted_jump;
+    wire ls_wb_has_trap;
+    wire [`E_TRAPTYPE_BITS-1:0] trapval;
+`ifdef RISCV_FORMAL
+
+`endif
 
     // CSR bus
     wire csr_valid, csr_r, csr_w, csr_ready, csr_fence;
@@ -101,7 +127,8 @@ module mr_core
     assign wbm0_dat_o = 0;
     assign wbm0_we_o = 0;
     assign wbm0_sel_o = 4'b1111;
-    mr_ifetch #( .RESET_VEC ) ifetch(.clk, .rst,
+    mr_ifetch #( .RESET_VEC(RESET_VEC)) ifetch(
+        .clk, .rst,
 
         // memory bus
         .adr_o(wbm0_adr_o[`XLEN-`XLEN_GRAN-1:0]), .dat_i(wbm0_dat_i), .stb_o(wbm0_stb_o), .ack_i(wbm0_ack_i), .err_i(wbm0_err_i),
@@ -145,8 +172,9 @@ module mr_core
 
         .o_csr_valid(csr_ret_valid), .o_csr_data(csr_ret_data)
 
-
-    
+`ifdef RISCV_FORMAL_CSR_MCYCLE
+        `rvformal_csr_mcycle_conn
+`endif
     );
 
 
@@ -179,6 +207,12 @@ module mr_core
         // Memory iface
         .addr_o(wbm1_adr_o[`XLEN-`XLEN_GRAN-1:0]), .dat_i(wbm1_dat_i), .dat_o(wbm1_dat_o), .stb_o(wbm1_stb_o), .ack_i(wbm1_ack_i),
         .we_o(wbm1_we_o), .sel_o(wbm1_sel_o), .err_i(wbm1_err_i), .stall_i(wbm1_stall_i), .cyc_o(wbm1_cyc_o)
+    );
+
+    mr_wb wb(.clk, .rst,
+        // WB registers
+        //.reg_write(wb_reg_valid), .reg_dst(wb_reg), .reg_data(wb_reg_data)
+
     );
 
 endmodule

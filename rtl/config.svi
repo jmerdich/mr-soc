@@ -1,6 +1,15 @@
 `ifndef MR_CONFIG_I
 `define MR_CONFIG_I
 
+`include "defines.sv"
+
+`ifndef YOSYS
+// SEE: https://github.com/YosysHQ/yosys/issues/2923
+`define TYPECAST(TYPE, VALUE) TYPE'(VALUE)
+`else
+`define TYPECAST(TYPE, VALUE) (VALUE)
+`endif
+
 `ifndef XLEN
 `define XLEN 32
 `endif
@@ -14,8 +23,14 @@
 `endif
 
 `ifndef MEMSIZE
-`define MEMSIZE 512*1024
+`define MEMSIZE 32*1024
+//`define MEMSIZE 512*1024
 `endif
+
+`ifndef RETQUEUE_SIZE
+`define RETQUEUE_SIZE 8
+`endif
+`define INSTID_BITS ($clog2(`RETQUEUE_SIZE))
 
 `define IMAXLEN 32
 `define REGSEL_BITS 5

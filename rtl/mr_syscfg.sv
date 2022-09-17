@@ -28,6 +28,10 @@ module mr_syscfg(
     // Each recieved+legal CSR gets one output in-order
     output logic o_csr_valid,
     output logic [`XLEN-1:0] o_csr_data
+
+`ifdef RISCV_FORMAL_CSR_MCYCLE
+    `rvformal_csr_mcycle_outputs
+`endif
 );
 
     // assign stall = 0;
@@ -60,7 +64,7 @@ module mr_syscfg(
     initial last_csr = 0;
     always @(posedge clk) begin
         if ((i_csr_addr != last_csr) && !csr_exists) begin
-            $display("Unknown CSR 0x%0h", i_csr_addr);
+            //$display("Unknown CSR 0x%0h", i_csr_addr);
         end
         last_csr <= i_csr_addr;
     end
