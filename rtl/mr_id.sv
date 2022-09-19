@@ -6,12 +6,15 @@ module mr_id (
     // From ifetch
     input [`IMAXLEN-1:0] inst,
     input [`XLEN-1:0] inst_pc,
+    input [`INSTID_BITS-1:0] inst_id,
+    input inst_br_predicted,
     output inst_ready,
     input inst_valid,
 
     // To following stages
     output reg alu_valid,
     input alu_ready,
+    output reg [`INSTID_BITS-1:0] alu_inst_id,
     output reg [`XLEN-1:0] alu_arg1,
     output reg [`XLEN-1:0] alu_arg2,
     output reg [`REGSEL_BITS-1:0] alu_dst,
@@ -21,26 +24,11 @@ module mr_id (
     output e_memops alu_memop,
     output e_memsz alu_size,
     output reg alu_signed, // ignored on store
-    output reg [`XLEN-1:0] alu_payload,
-    output reg [`XLEN-1:0] alu_payload2,
-
-    // CSRs
-    // Legality and needs-fence must be combinatorial
-    output csr_valid, csr_r, csr_w,
-    output [`CSRLEN-1:0] csr_addr,
-    output [`XLEN-1:0] csr_data,
-    output [`XLEN-1:0] csr_wmask,
-    input csr_ready, csr_legal, csr_fence, // TODO: fence logic
-
-    // Each recieved+legal CSR gets one output in-order
-    input csr_ret_valid,
-    input [`XLEN-1:0] csr_ret_data,
-
-    // Misc SYSTEM
-    output [2:0] insts_ret,
+    output reg [`XLEN-1:0] alu_payload, // can be *many* things
+    output e_payload alu_payload_kind, // debug only :P
+    output alu_br_predicted,
 
     // From WB
-    input jmp_done,
     input wb_valid,
     input [`REGSEL_BITS-1:0] wb_reg,
     input [`XLEN-1:0] wb_val
@@ -53,19 +41,20 @@ module mr_id (
     logic [`XLEN-1:0] next_arg1;
     logic [`XLEN-1:0] next_arg2;
     logic [`XLEN-1:0] next_payload;
-    logic [`XLEN-1:0] next_payload2;
+    e_payload next_payload_kind;
     e_aluops next_alu_op;
     e_memsz next_size;
     logic   next_signed;
     e_memops next_mem_op;
     e_brops next_br_op;
+    logic   next_br_predicted;
+    logic [`INSTID_BITS-1:0] next_inst_id;
     logic [`REGSEL_BITS-1:0] next_dst;
     logic next_uses_rs1;
     logic next_uses_rs2;
     logic next_uses_rsd;
     logic op_valid;
     logic data_hazard;
-    e_dispatch_kind dispatch_kind;
 
     logic [2:0] func3 = inst[14:12];
     logic [6:0] func7 = inst[31:25];
@@ -76,23 +65,17 @@ module mr_id (
     logic [4:0] rsd = inst[11:7];
 
     logic next_stg_ready;
-    assign next_stg_ready = ((dispatch_kind == DISPATCH_CSR) & csr_ready) |
-                            ((dispatch_kind == DISPATCH_NORMAL) & alu_ready);
+    assign next_stg_ready = alu_ready;
     assign inst_ready = next_stg_ready & !rst & (!inst_valid | !data_hazard);
 
     logic [`XLEN-1:0] regfile[31:1];
     logic [1:0] reg_writes_pending[31:1];
-    logic has_unresolved_jmp;
-    logic [4:0] num_pending_insts;
 
     logic [`XLEN-1:0] rs1_data;
     assign rs1_data = (rs1 != 0) ? regfile[rs1] : 0;
     logic [`XLEN-1:0] rs2_data;
     assign rs2_data = (rs2 != 0) ? regfile[rs2] : 0;
     // hazard detection
-
-    logic csr_active;
-    logic [4:0] csr_dest;
 
     assign rs1_writes_pending = reg_writes_pending[rs1];
     assign rs2_writes_pending = reg_writes_pending[rs2];
@@ -101,19 +84,14 @@ module mr_id (
 
     logic dest_may_have_hazard;
     assign dest_may_have_hazard = next_uses_rsd & (reg_writes_pending[rsd] != 0) & (rst != 0);
-    // CSRs and normal pipe are async. Always assume a hazard here.
-    logic csr_dest_hazard;
-    assign csr_dest_hazard = (dispatch_kind == DISPATCH_CSR) & dest_may_have_hazard;
+    // Only assume RAW hazards are an issue. Side effects from others are handled by WB unit.
     logic wb_dest_hazard;
-    assign wb_dest_hazard = (dispatch_kind == DISPATCH_NORMAL) &
-                           dest_may_have_hazard &
-                           (csr_dest == rsd) &
-                           csr_active;
+    assign wb_dest_hazard = dest_may_have_hazard;
 
     logic dest_hazard;
-    assign dest_hazard = csr_dest_hazard | wb_dest_hazard;
+    assign dest_hazard =  wb_dest_hazard;
 
-    assign data_hazard = rs1_data_hazard || rs2_data_hazard || has_unresolved_jmp || dest_hazard;
+    assign data_hazard = rs1_data_hazard || rs2_data_hazard || dest_hazard;
 
     logic is_comp;
     assign is_comp = (inst[1:0] != 2'b11);
@@ -155,9 +133,10 @@ module mr_id (
             regfile[i] = 0;
             reg_writes_pending[i] = 0;
         end
-        has_unresolved_jmp = 0;
     end
 
+    assign alu_inst_id = next_inst_id;
+    assign alu_br_predicted = next_br_predicted;
     assign alu_arg1 = next_arg1;
     assign alu_arg2 = next_arg2;
     assign alu_aluop = next_alu_op;
@@ -167,29 +146,22 @@ module mr_id (
     assign alu_size = next_size;
     assign alu_signed = next_signed;
     assign alu_payload = next_payload;
-    assign alu_payload2 = next_payload2;
-    assign alu_valid = next_inst_valid & (dispatch_kind == DISPATCH_NORMAL);
-
-    assign csr_valid = next_inst_valid & (dispatch_kind == DISPATCH_CSR);
+    assign alu_payload_kind = next_payload_kind;
+    assign alu_valid = next_inst_valid;
 
     logic inst_dispatching;
-    assign inst_dispatching = (alu_valid & alu_ready) | (csr_valid & csr_ready & csr_legal);
+    assign inst_dispatching = (alu_valid & alu_ready);
     logic write_dispatching;
     assign write_dispatching = inst_dispatching & next_uses_rsd & (rsd != 0);
-
-    assign insts_ret = {2'b0, wb_valid} + {2'b0, csr_ret_valid};
 
     logic next_inst_valid;
     assign next_inst_valid = len_valid & op_valid & !rst & inst_valid & !data_hazard;
     always_ff @(posedge clk) begin
         if (rst) begin
             for (integer i=1; i < 32; i++) begin
-                regfile[i] = 0;
-                reg_writes_pending[i] = 0;
+                regfile[i] <= 0;
+                reg_writes_pending[i] <= 0;
             end
-            num_pending_insts <= 0;
-            csr_active <= 0;
-            has_unresolved_jmp <= 0;
         end
         else begin
 `ifndef SYNTHESIS
@@ -206,41 +178,9 @@ module mr_id (
                 regfile[wb_reg] <= wb_val;
                 reg_writes_pending[wb_reg] <= reg_writes_pending[wb_reg] - 1;
             end
-            if (csr_ret_valid) begin
-                assert(csr_active);
-                csr_active <= 0;
-                if (csr_dest != 0) begin
-                    assert(!wb_valid || wb_reg != csr_dest);
-                    regfile[csr_dest] <= csr_ret_data;
-                    reg_writes_pending[csr_dest] <= reg_writes_pending[csr_dest] - 1;
-                end
-            end
-
-
-            if (csr_valid & csr_ready) begin
-                assert(csr_active == 0);
-                csr_active <= 1;
-                assert(next_uses_rsd);
-                csr_dest <= rsd;
-            end
-
-            if (alu_valid & alu_ready & next_br_op != BROP_NEVER) begin
-                assert(has_unresolved_jmp == 0);
-                has_unresolved_jmp <= 1;
-            end
-            if (jmp_done) begin
-                assert(has_unresolved_jmp == 1);
-                has_unresolved_jmp <= 0;
-            end
-
-            assert(num_pending_insts < 5);
-            num_pending_insts <= num_pending_insts + 5'(inst_dispatching) - 5'(wb_valid) - 5'(csr_ret_valid);
 
             // simultaneous inc and dec hazard counter to same register
-            if (write_dispatching & (
-                (wb_valid & wb_reg != 0 & wb_reg == rsd) |
-                (csr_ret_valid & csr_dest != 0 & csr_dest == rsd)
-             )) begin
+            if (write_dispatching & (wb_valid & wb_reg != 0 & wb_reg == rsd)) begin
                 reg_writes_pending[wb_reg] <= reg_writes_pending[wb_reg];
             end
         end
@@ -258,17 +198,18 @@ module mr_id (
         next_arg1 = 0;
         next_arg2 = 0;
         next_payload = 0;
-        next_payload2 = 0;
+        next_payload_kind = PAYLOAD_NONE;
         next_uses_rs1 = 0;
         next_uses_rs2 = 0;
         next_uses_rsd = 0;
         next_signed = 0;
-        dispatch_kind = DISPATCH_NORMAL;
-        csr_r = 0;
-        csr_w = 0;
-        csr_addr = 0;
-        csr_data = 0;
-        csr_wmask = 0;
+        next_inst_id = inst_id;
+        next_br_predicted = inst_br_predicted;
+        // csr_r = 0;
+        // csr_w = 0;
+        // csr_addr = 0;
+        // csr_data = 0;
+        // csr_wmask = 0;
 
         case(op)
         RV_OP_IMM: begin
@@ -333,9 +274,10 @@ module mr_id (
             next_dst = 0;
             next_alu_op = ALU_ADD; // Use ALU for addr calc
             next_payload = rs2_data;
+            next_payload_kind = PAYLOAD_STOREDATA;
             next_uses_rs2 = 1;
 
-            next_mem_op = MEMOP_STORE;
+            next_mem_op = MEMOP_STORE_MEM;
             case (func3_mem)
                 RVF3_BYTE: next_size = MEMSZ_1B;
                 RVF3_HALF: next_size = MEMSZ_2B;
@@ -353,7 +295,7 @@ module mr_id (
             next_uses_rsd = 1;
             next_alu_op = ALU_ADD; // Use ALU for addr calc
 
-            next_mem_op = MEMOP_LOAD;
+            next_mem_op = MEMOP_LOAD_MEM;
             case (func3_mem)
                 RVF3_BYTE: begin
                     next_size = MEMSZ_1B;
@@ -393,7 +335,6 @@ module mr_id (
             next_uses_rsd = 1;
             next_alu_op = ALU_ADD;
             next_br_op = BROP_ALWAYS;
-            next_payload = inst_pc;
         end
         RV_JALR: begin
             op_valid = (func3 == 0);
@@ -404,17 +345,15 @@ module mr_id (
             next_uses_rsd = 1;
             next_alu_op = ALU_ADD;
             next_br_op = BROP_ALWAYS;
-            next_payload = inst_pc;
         end
         RV_BRANCH: begin
             op_valid = 1;
-            next_arg1 = inst_pc;
-            next_arg2 = imm_b_lo;
-            next_alu_op = ALU_ADD;
-            next_payload = rs1_data;
-            next_payload2 = rs2_data;
+            next_arg1 = rs1_data;
+            next_arg2 = rs2_data;
             next_uses_rs1 = 1;
             next_uses_rs2 = 1;
+            next_payload = imm_b_lo;
+            next_payload_kind = PAYLOAD_BRANCHOFFSET;
             case (func3_br)
                 RVF3_BEQ:  next_br_op = BROP_EQ;
                 RVF3_BNE:  next_br_op = BROP_NE;
@@ -425,13 +364,14 @@ module mr_id (
                 default: op_valid = 0;
             endcase
         end
+`ifdef NEVER
+        // TODO: rework all of this into ldst
         RV_SYSTEM: begin
             op_valid = 1;
             // hack: all CSRs and breaks are nops!
             if (func3[1:0] != 0) begin
                 assert(!csr_fence); // not implemented yet :(
                 op_valid = csr_legal;
-                dispatch_kind = DISPATCH_CSR;
                 csr_addr = imm_csr;
                 next_uses_rsd = 1;
                 case (func3_sys)
@@ -471,6 +411,7 @@ module mr_id (
 `endif
             end
         end
+`endif
         default: begin
             // What is this?
             op_valid = 0;

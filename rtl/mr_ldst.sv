@@ -5,19 +5,30 @@ module mr_ldst(
     input clk, rst,
 
     // From prev
+    input [`INSTID_BITS-1:0] ex_instid_i,
     input e_memops ex_op_i,
     input e_memsz ex_size_i,
     input ex_signed_i,
+    input ex_jump_taken_i,
+    input ex_jump_predicted_i,
+    input ex_is_jump_i,
     input [`XLEN-1:0] ex_addr_i,
     input [`XLEN-1:0] ex_payload_i,
+    input e_payload ex_payload_kind_i,
     input [`REGSEL_BITS-1:0] ex_dst_reg_i,
     input ex_valid_i,
     output ex_ready_o,
 
     // To WB
     output reg wb_write,
-    output reg [`XLEN-1:0] wb_payload_o,
+    output reg [`INSTID_BITS-1:0] wb_instid_o,
+    output reg [`XLEN-1:0] wb_data_o,
     output reg [`REGSEL_BITS-1:0] wb_dst_reg_o,
+    output reg [`XLEN-1:0] wb_payload_o,
+    output e_payload wb_payload_kind_o,
+    output wb_jump_taken_o,
+    output wb_is_jump_o,
+    output wb_jump_predicted_o,
     // assume no stall for WB stage
 
     // Wishbone master
@@ -40,6 +51,9 @@ e_memsz size_pending;
 logic signed_pending;
 logic [`REGSEL_BITS-1:0] dst_reg_pending;
 logic [`XLEN_GRAN-1:0] shift_pending;
+logic [`XLEN-1:0] payload_pending;
+e_payload payload_kind_pending;
+logic [`INSTID_BITS-1:0] instid_pending;
 
 initial cyc_o = 0;
 initial stb_o = 0;
@@ -135,29 +149,47 @@ endcase
 always_ff @(posedge clk) begin
     if (!reset & !cyc_o & ex_valid_i & ex_op_i != MEMOP_NONE) begin
         addr_o <= ex_addr_i[`XLEN-1:`XLEN_GRAN];
-        we_o <= (ex_op_i == MEMOP_STORE);
+        we_o <= (ex_op_i == MEMOP_STORE_MEM);
         sel_o <= sel;
         dat_o <= shifted_dat_o;
         dst_reg_pending <= ex_dst_reg_i;
         size_pending <= ex_size_i;
         signed_pending <= ex_signed_i;
         shift_pending <= shift_bits_o;
+        payload_pending <= ex_payload_i;
+        payload_kind_pending <= ex_payload_kind_i;
+        instid_pending <= ex_instid_i;
+        assert(ex_jump_taken_i == 0);
+        assert(ex_jump_predicted_i == 0);
+        assert(ex_is_jump_i == 0);
     end
 end
 
 
 // Handle returning the data when the r/w clears
 always_ff @(posedge clk) begin
+    wb_jump_taken_o <= 0;
+    wb_jump_predicted_o <= 0;
+    wb_is_jump_o <= 0;
     if (reset) begin 
         wb_write <= 0;
     end else if (ack_i & (!stb_o | !stall_i)) begin
         wb_write <= 1;
-        wb_payload_o <= shifted_dat_i;
+        wb_data_o <= shifted_dat_i;
         wb_dst_reg_o <= dst_reg_pending;
+        wb_payload_o <= payload_pending;
+        wb_payload_kind_o <= payload_kind_pending;
+        wb_instid_o <= instid_pending;
     end else if (!cyc_o & ex_valid_i & (ex_op_i == MEMOP_NONE)) begin
         wb_write <= 1;
-        wb_payload_o <= ex_addr_i;
+        wb_data_o <= ex_addr_i;
         wb_dst_reg_o <= ex_dst_reg_i;
+        wb_payload_o <= ex_payload_i;
+        wb_payload_kind_o <= ex_payload_kind_i;
+        wb_instid_o <= ex_instid_i;
+        wb_jump_taken_o <= ex_jump_taken_i;
+        wb_jump_predicted_o <= ex_jump_predicted_i;
+        wb_is_jump_o <= ex_is_jump_i;
     end else begin
         wb_write <= 0;
     end

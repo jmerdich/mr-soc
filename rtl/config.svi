@@ -1,8 +1,6 @@
 `ifndef MR_CONFIG_I
 `define MR_CONFIG_I
 
-`include "defines.sv"
-
 `ifndef YOSYS
 // SEE: https://github.com/YosysHQ/yosys/issues/2923
 `define TYPECAST(TYPE, VALUE) TYPE'(VALUE)
@@ -61,11 +59,21 @@ typedef enum logic [`E_BR_OP_BITS-1:0] {
     BROP_GEU
  } e_brops;
 
+`define E_PAYLOAD_BITS 3
+typedef enum logic [`E_PAYLOAD_BITS-1:0] {
+    PAYLOAD_NONE,
+    PAYLOAD_INSTDATA,
+    PAYLOAD_BADADDR,
+    PAYLOAD_STOREDATA,
+    PAYLOAD_BRANCHOFFSET
+} e_payload;
+
 `define E_MEM_OP_BITS 2
 typedef enum logic [`E_MEM_OP_BITS-1:0] {
     MEMOP_NONE,
-    MEMOP_LOAD,
-    MEMOP_STORE
+    MEMOP_LOAD_MEM,
+    MEMOP_STORE_MEM
+    // Something something CSRs
 } e_memops;
 
 `define E_DISPATCH_KIND_BITS 1

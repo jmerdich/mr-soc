@@ -14,7 +14,9 @@ module mr_alu (
     input e_memsz id_size,
     input id_signed,
     input [`XLEN-1:0] id_payload,
-    input [`XLEN-1:0] id_payload2,
+    input e_payload id_payload_kind,
+    input id_branch_predicted,
+    input [`INSTID_BITS-1:0] id_inst_id,
 
     input id_valid,
     output id_ready,
@@ -22,6 +24,7 @@ module mr_alu (
     // To next stage
     output reg ls_valid,
     input ls_ready,
+    output reg [`INSTID_BITS-1:0] ls_inst_id,
     output reg [`XLEN-1:0] ls_dest,
     output reg [`REGSEL_BITS-1:0] ls_dest_reg,
 
@@ -29,16 +32,13 @@ module mr_alu (
     output e_memsz ls_size,
     output reg ls_signed,
     output reg [`XLEN-1:0] ls_payload,
-
-    // Branching
-    output reg wb_pc_valid,
-    output reg [`XLEN-1:0] wb_pc,
-    output reg jmp_done
+    output e_payload ls_payload_kind,
+    output reg ls_branch_taken,
+    output reg ls_branch_predicted,
+    output reg ls_is_jump
 );
 
-logic [`XLEN-1:0] next_dest;
 logic [`XLEN-1:0] alu_res;
-assign next_dest = (id_br_op == BROP_ALWAYS) ? id_payload + 4 : alu_res;
 logic             take_branch;
 
 assign id_ready = ls_ready; // We always take one clock... for now.
@@ -46,10 +46,8 @@ assign id_ready = ls_ready; // We always take one clock... for now.
 always @(posedge clk) begin
     if (rst) begin 
         ls_valid <= 0;
-        wb_pc_valid <= 0;
-        jmp_done <= 0;
     end else if (ls_ready & id_valid) begin
-        ls_dest <= next_dest;
+        ls_dest <= alu_res;
         ls_valid <= id_valid;
         // passthru
         ls_dest_reg <= id_dest_reg;
@@ -57,14 +55,13 @@ always @(posedge clk) begin
         ls_size <= id_size;
         ls_signed <= id_signed;
         ls_payload <= id_payload;
-
-        wb_pc <= alu_res;
-        wb_pc_valid <= take_branch;
-        jmp_done <= (id_br_op != BROP_NEVER);
+        ls_payload_kind <= id_payload_kind;
+        ls_is_jump <= (id_br_op == BROP_ALWAYS);
+        ls_branch_taken <= take_branch;
+        ls_branch_predicted <= id_branch_predicted;
+        ls_inst_id <= id_inst_id;
     end else begin
         ls_valid <= 0;
-        wb_pc_valid <= 0;
-        jmp_done <= 0;
     end
 end
 
@@ -93,12 +90,12 @@ end
 always_comb case(id_br_op)
     BROP_NEVER: take_branch = 0;
     BROP_ALWAYS: take_branch = 1;
-    BROP_EQ: take_branch = (id_payload == id_payload2);
-    BROP_NE: take_branch = (id_payload != id_payload2);
-    BROP_LT: take_branch = ($signed(id_payload) < $signed(id_payload2));
-    BROP_LTU: take_branch = (id_payload < id_payload2);
-    BROP_GE: take_branch = ($signed(id_payload) >= $signed(id_payload2));
-    BROP_GEU: take_branch = (id_payload >= id_payload2);
+    BROP_EQ: take_branch = (id_arg1 == id_arg2);
+    BROP_NE: take_branch = (id_arg1 != id_arg2);
+    BROP_LT: take_branch = ($signed(id_arg1) < $signed(id_arg2));
+    BROP_LTU: take_branch = (id_arg1 < id_arg2);
+    BROP_GE: take_branch = ($signed(id_arg1) >= $signed(id_arg2));
+    BROP_GEU: take_branch = (id_arg1 >= id_arg2);
 endcase
 
 

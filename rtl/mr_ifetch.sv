@@ -27,23 +27,42 @@ module mr_ifetch
     // To ID
     output reg [`IMAXLEN-1:0] inst,
     output reg [`XLEN-1:0] inst_pc,
+    output reg [`INSTID_BITS-1:0] inst_id,
     output reg inst_valid,
+    output inst_br_predicted,
     input id_ready,
 
-    // From WB
+    // From WB (pipe flush/jump)
     input [`XLEN-1:0] wb_pc,
-    input wb_pc_valid
+    input wb_pc_valid,
+
+    // To WB (retqueue alloc)
+    input inst_buffer_full,
+    output reg inst_alloc,
+    output reg [`XLEN-1:0] inst_alloc_pc,
+    input [`INSTID_BITS-1:0] next_inst_id // only valid if not full
 );
+    assign inst_br_predicted = 0; // world's worst branch predictor!
+    assign inst_id = next_inst_id;
 
     reg [`XLEN-1:0] pc;
     initial begin
         pc = RESET_VEC;
     end
 
+    logic dispatching;
+    assign dispatching = !inst_buffer_full & id_ready & inst_valid;
+
+    assign inst_alloc = dispatching;
+    assign inst_alloc_pc = inst_pc;
+
     logic [`XLEN-1:0] pc_offset;
     assign pc_offset = 4;
 
-    logic addr_changed;
+    logic [`XLEN-1:0] nextpc;
+    assign nextpc = pc + pc_offset;
+
+    logic addr_changed; // true if we need to discard the current req
     always_ff @(posedge clk) begin
         addr_changed <= addr_changed & !stb_o;
         if (rst) begin
@@ -52,8 +71,8 @@ module mr_ifetch
         end else if (wb_pc_valid) begin
             pc <= wb_pc;
             addr_changed <= cyc_o;
-        end else if (id_ready & inst_valid)
-            pc <= pc + pc_offset;
+        end else if (dispatching)
+            pc <= nextpc;
         else
             pc <= pc;
     end
@@ -63,10 +82,12 @@ module mr_ifetch
     always @(posedge clk) reset <= reset & rst;
 
     always_ff @(posedge clk) begin
+        inst <= inst;
+        inst_pc <= inst_pc;
         if (reset) begin
             inst_valid <= 0;
         end else if (ack_i & (!stb_o | !stall_i)) begin
-            inst_valid <= !addr_changed;
+            inst_valid <= !addr_changed & !inst_buffer_full;
             inst_pc <= pc;
             inst <= dat_i;
         end else if (id_ready) begin
