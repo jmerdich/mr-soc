@@ -11,7 +11,17 @@
 
 // Common verilator headers
 #include <verilated.h>
+#if VM_TRACE_FST
 #include <verilated_fst_c.h>
+#define TRACEEXT ".fst"
+#define TRACECLS VerilatedFstC
+#elif VM_TRACE_VCD
+#include <verilated_vcd_c.h>
+#define TRACEEXT ".vcd"
+#define TRACECLS VerilatedVcdC
+#else
+#error "invalid trace mode!?!"
+#endif
 
 // Other libs
 #include <cxxopts.hpp>
@@ -25,7 +35,7 @@
 #define Vtop Vmr_soc
 
 Vtop *top = nullptr;                      // Instantiation of module
-VerilatedFstC* tfp = nullptr;
+TRACECLS* tfp = nullptr;
 uint32_t* sysmem = nullptr;
 size_t sysmem_size = 0;
 
@@ -48,14 +58,14 @@ void closeGracefully(int dummy) {
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);   // Remember args
     Verilated::traceEverOn(true);
-    tfp = new VerilatedFstC;
+    tfp = new TRACECLS;
 
     cxxopts::Options options(argv[0], "Mr. SOC RISC-V machine");
 
     options.add_options()
         ("h,help", "Print usage")
         ("f,file", "Binary file to run", cxxopts::value<std::string>())
-        ("trace-file", "Output trace file", cxxopts::value<std::string>()->default_value("obj_dir/sim.fst"))
+        ("trace-file", "Output trace file", cxxopts::value<std::string>()->default_value("obj_dir/sim" TRACEEXT))
         ("e,entrypoint", "Entrypoint to start execution at", cxxopts::value<uint64_t>()->default_value("0"))
         ("halt-addr", "Address to check to see if finished", cxxopts::value<int64_t>()->default_value("-1"))
         ("putc-addr", "Address to write bytes to", cxxopts::value<int64_t>()->default_value("-1"))
