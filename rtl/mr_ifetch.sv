@@ -77,6 +77,13 @@ module mr_ifetch
             pc <= pc;
     end
 
+`ifdef HAVE_DISASS
+    string inst_disass;
+    initial begin
+        inst_disass = "";
+    end
+`endif
+
     logic reset;
     initial reset = 1;
     always @(posedge clk) reset <= reset & rst;
@@ -90,6 +97,9 @@ module mr_ifetch
             inst_valid <= !addr_changed & !inst_buffer_full;
             inst_pc <= pc;
             inst <= dat_i;
+`ifdef HAVE_DISASS
+            inst_disass <= rv_disass(dat_i);
+`endif
         end else if (id_ready) begin
             inst_valid <= 0;
         end else begin

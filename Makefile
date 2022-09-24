@@ -6,10 +6,10 @@ RISCV_TOOLS_DIR ?= /opt/riscv32/bin
 export PATH:=${RISCV_TOOLS_DIR}:${PATH}
 
 # ENV/CONFIG
-VERILATOR_ARGS = --top-module ${TOP_MODULE} ${VERILATOR_WARNS} $(addprefix -I,${V_INCLUDE_DIRS})
+VERILATOR_ARGS = --top-module ${TOP_MODULE} ${VERILATOR_WARNS} $(addprefix -I,${V_INCLUDE_DIRS}) $(addprefix -D,${V_DEFINES})
 VERILATOR_WARNS = -Wall -Wno-unused
 VERILATOR_LINT_ARGS = --lint-only
-VERILATOR_VER_ARGS = --cc --build --exe --assert -Wno-undriven --trace-fst --trace-structs -CFLAGS "-ggdb $(addprefix -I../,${CXX_INCLUDE_DIRS})"
+VERILATOR_VER_ARGS = --cc --build --exe --assert -Wno-undriven --trace-fst --trace-structs --trace-strings -CFLAGS "-ggdb $(addprefix -I../,${CXX_INCLUDE_DIRS})"
 
 OUTFILE = obj_dir/V${TOP_MODULE}
 
@@ -23,6 +23,13 @@ CXX_INCLUDE_DIRS = extern/cxxopts/include
 V_INCLUDE_DIRS = rtl extern/wb2axip/rtl
 V_HEADERS = rtl/config.svi
 V_SOURCES = rtl/mr_soc.sv rtl/mr_core.sv rtl/mr_alu.sv rtl/mr_id.sv rtl/mr_ifetch.sv rtl/mr_ldst.sv  rtl/mem_backend/simple_mem.sv
+V_DEFINES =
+
+# Add dpi plugin
+VERILATOR_CXX_SOURCES += extern/riscv-disass-dpi/src/rv_disass.c
+CXX_INCLUDE_DIRS +=  extern/riscv-disass-dpi/src
+V_INCLUDE_DIRS += extern/riscv-disass-dpi/src
+V_DEFINES += HAVE_DISASS
 
 .PHONY: check
 check: ${V_HEADERS} ${V_SOURCES}

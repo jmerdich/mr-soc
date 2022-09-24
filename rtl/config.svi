@@ -20,9 +20,13 @@
 `define IALIGN 32
 `endif
 
+`ifdef HAVE_DISASS
+`include "rv_disass.svi"
+`endif
+
 `ifndef MEMSIZE
-`define MEMSIZE 32*1024
-//`define MEMSIZE 512*1024
+//`define MEMSIZE 32*1024
+`define MEMSIZE 512*1024
 `endif
 
 `ifndef RETQUEUE_SIZE

@@ -8,3 +8,6 @@
 [submodule "extern/riscv-compliance"]
 	path = extern/riscv-compliance
 	url = https://github.com/riscv/riscv-compliance
+[submodule "extern/riscv-disass-dpi"]
+	path = extern/riscv-disass-dpi
+	url = https://github.com/jmerdich/riscv-disass-dpi
