@@ -40,10 +40,12 @@ module mr_wb(
 logic [`RETQUEUE_SIZE-1:0] inst_valid;
 logic [`RETQUEUE_SIZE-1:0][`IMAXLEN-1:0] inst_pcs;
 
-logic ret_is_ok = (jump_taken == jump_predicted); // Add exception logic later
+logic ret_is_ok;
+assign ret_is_ok = (jump_taken == jump_predicted); // Add exception logic later
 assign is_spectulating = !ret_is_ok;
 
 always @(posedge clk) if (rst) begin
+    flush_pipe_to_pc <= 0;
     for (integer i = 0; i < `RETQUEUE_SIZE; i++) begin
         // The rest can be garbage
         inst_valid[i] <= 0;
@@ -69,6 +71,7 @@ end else if (ret_valid && !ret_is_ok) begin
     end
 end else begin
     assert(!(inst_in && ret_valid) || (next_inst_id != ret_id));
+    flush_pipe_to_pc <= 0;
     if (inst_in) begin
         assert(!inst_buffer_full);
         inst_valid[next_inst_id] <= 1;

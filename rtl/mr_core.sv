@@ -171,7 +171,7 @@ module mr_core
         .alu_memop(id_alu_memop), .alu_size(id_alu_size), .alu_signed(id_alu_signed), .alu_payload(id_alu_payload),
 
         // From WB
-        .wb_valid(wb_reg_valid), .wb_reg(wb_reg), .wb_val(wb_reg_data)
+        .wb_valid(wb_reg_valid), .wb_reg(wb_reg), .wb_val(wb_reg_data), .wb_pipe_flush(flush_pipe_to_pc)
     );
 
 `ifdef NEVER

@@ -31,7 +31,8 @@ module mr_id (
     // From WB
     input wb_valid,
     input [`REGSEL_BITS-1:0] wb_reg,
-    input [`XLEN-1:0] wb_val
+    input [`XLEN-1:0] wb_val,
+    input wb_pipe_flush
 );
 
     logic [1:0] rs1_writes_pending;
@@ -155,7 +156,7 @@ module mr_id (
     assign write_dispatching = inst_dispatching & next_uses_rsd & (rsd != 0);
 
     logic next_inst_valid;
-    assign next_inst_valid = len_valid & op_valid & !rst & inst_valid & !data_hazard;
+    assign next_inst_valid = len_valid & op_valid & !rst & !wb_pipe_flush & inst_valid & !data_hazard;
     always_ff @(posedge clk) begin
         if (rst) begin
             for (integer i=1; i < 32; i++) begin
@@ -163,10 +164,17 @@ module mr_id (
                 reg_writes_pending[i] <= 0;
             end
         end
+        else if (wb_pipe_flush) begin
+            for (integer i=1; i < 32; i++) begin
+                reg_writes_pending[i] <= 0;
+            end
+        end
         else begin
 `ifndef SYNTHESIS
-            if (inst_valid  & inst_ready & !op_valid)
+            if (inst_valid  & inst_ready & !op_valid) begin
                 $display("Illegal OP! Time=%0t, Inst: %0h, PC: %0h", $time, inst, inst_pc);
+                assert(0);
+            end
 `endif
 
             if (write_dispatching) begin
