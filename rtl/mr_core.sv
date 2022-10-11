@@ -174,7 +174,6 @@ module mr_core
         .wb_valid(wb_reg_valid), .wb_reg(wb_reg), .wb_val(wb_reg_data), .wb_pipe_flush(flush_pipe_to_pc)
     );
 
-`ifdef NEVER
     mr_syscfg sys(.clk, .rst,
     
         .insts_ret,
@@ -188,8 +187,6 @@ module mr_core
         `rvformal_csr_mcycle_conn
 `endif
     );
-`endif
-
 
     mr_alu alu(.clk, .rst,
 

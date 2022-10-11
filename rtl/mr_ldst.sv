@@ -43,6 +43,19 @@ module mr_ldst(
     input err_i,
     input stall_i,
     input [`XLEN-1:0] dat_i
+
+    // To CSR unit
+    output csr_valid;
+    output csr_read;
+    output csr_write;
+    output [`CSRLEN-1:0] csr_addr,
+    output [`XLEN-1:0] csr_data,
+    output [`XLEN-1:0] csr_wmask,
+
+    // Each recieved+legal CSR gets one output in-order
+    input i_csr_ready, i_csr_legal, i_csr_fence,
+    input logic i_csr_valid,
+    input logic [`XLEN-1:0] i_csr_data
 );
 logic reset;
 
@@ -55,6 +68,8 @@ logic [`XLEN-1:0] payload_pending;
 e_payload payload_kind_pending;
 logic [`INSTID_BITS-1:0] instid_pending;
 
+logic got_mem_req;
+assign got_mem_req = (ex_op_i == MEMOP_LOAD_MEM || ex_op_i == MEMOP_STORE_MEM);
 initial cyc_o = 0;
 initial stb_o = 0;
 always_ff @(posedge clk) begin
@@ -82,7 +97,7 @@ always_ff @(posedge clk) begin
     end else begin
         // Idle
 
-        if (ex_valid_i && (ex_op_i != MEMOP_NONE)) begin
+        if (ex_valid_i && got_mem_req) begin
             // New memory req!
             cyc_o <= 1;
             stb_o <= 1;
@@ -147,7 +162,7 @@ endcase
 
 // Data sending logic
 always_ff @(posedge clk) begin
-    if (!reset & !cyc_o & ex_valid_i & ex_op_i != MEMOP_NONE) begin
+    if (!reset & !cyc_o & ex_valid_i & got_mem_req) begin
         addr_o <= ex_addr_i[`XLEN-1:`XLEN_GRAN];
         we_o <= (ex_op_i == MEMOP_STORE_MEM);
         sel_o <= sel;
@@ -195,6 +210,10 @@ always_ff @(posedge clk) begin
     end
 end
 
+logic got_csr_req = (ex_op_i == MEMOP_CSR_RW) ||
+                    (ex_op_i == MEMOP_CSR_READ) ||
+                    (ex_op_i == MEMOP_CSR_SETBITS) ||
+                    (ex_op_i == MEMOP_CSR_CLEARBITS);
 
 // Formal wants a initial reset. 
 initial reset = 1;

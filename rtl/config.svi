@@ -72,12 +72,15 @@ typedef enum logic [`E_PAYLOAD_BITS-1:0] {
     PAYLOAD_BRANCHOFFSET
 } e_payload;
 
-`define E_MEM_OP_BITS 2
+`define E_MEM_OP_BITS 3
 typedef enum logic [`E_MEM_OP_BITS-1:0] {
     MEMOP_NONE,
     MEMOP_LOAD_MEM,
-    MEMOP_STORE_MEM
-    // Something something CSRs
+    MEMOP_STORE_MEM,
+    MEMOP_CSR_RW,
+    MEMOP_CSR_READ,
+    MEMOP_CSR_SETBITS,
+    MEMOP_CSR_CLEARBITS,
 } e_memops;
 
 `define E_DISPATCH_KIND_BITS 1
